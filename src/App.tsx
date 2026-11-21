@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { InsightsView } from './components/InsightsView';
 import { OutfitsView } from './components/OutfitsView';
 import { PlanView } from './components/PlanView';
+import { Toast, useUndo } from './components/Toast';
 import { TodayView } from './components/TodayView';
 import { WardrobeView } from './components/WardrobeView';
+import { cleanupOrphanPhotos, deletePhoto } from './data/photos';
 import {
   loadItems,
   loadLastBackup,
@@ -74,6 +76,36 @@ export default function App() {
     setWearLog((log) => [...log.filter((entry) => entry.date !== date), { date, itemIds }]);
   }
 
+  // ---------- Verwijderen en archiveren, met "Ongedaan maken" ----------
+
+  const { toast, showUndo, dismiss } = useUndo();
+
+  // Opruimen: foto's van kledingstukken die niet meer bestaan (bijv. na het sluiten tijdens "Ongedaan maken").
+  useEffect(() => {
+    cleanupOrphanPhotos(loadItems().map((i) => i.id)).catch(() => {});
+  }, []);
+
+  function deleteItem(item: ClothingItem) {
+    setItems((current) => current.filter((i) => i.id !== item.id));
+    showUndo(
+      `"${item.name}" verwijderd`,
+      () => setItems((current) => [...current, item]),
+      () => void deletePhoto(item.id).catch(() => {}),
+    );
+  }
+
+  function setArchived(item: ClothingItem, archived: boolean) {
+    const update = (value: boolean) =>
+      setItems((current) => current.map((i) => (i.id === item.id ? { ...i, archived: value } : i)));
+    update(archived);
+    showUndo(`"${item.name}" ${archived ? 'gearchiveerd' : 'teruggezet'}`, () => update(!archived));
+  }
+
+  function deleteOutfit(outfit: SavedOutfit) {
+    setSavedOutfits((current) => current.filter((o) => o.id !== outfit.id));
+    showUndo(`Outfit "${outfit.name}" verwijderd`, () => setSavedOutfits((current) => [outfit, ...current]));
+  }
+
   /** "✨ Outfit rond dit stuk": naar Vandaag met dit stuk vastgezet. */
   function buildAround(item: ClothingItem) {
     setAnchorId(item.id);
@@ -122,15 +154,24 @@ export default function App() {
             outfits={savedOutfits}
             wearLog={wearLog}
             onOutfitsChange={setSavedOutfits}
+            onDeleteOutfit={deleteOutfit}
             onLogWear={logWear}
           />
         )}
-        {tab === 'kast' && <WardrobeView items={items} onItemsChange={setItems} onBuildAround={buildAround} />}
+        {tab === 'kast' && (
+          <WardrobeView
+            items={items}
+            onItemsChange={setItems}
+            onDeleteItem={deleteItem}
+            onArchiveItem={(item) => setArchived(item, true)}
+            onBuildAround={buildAround}
+          />
+        )}
         {tab === 'inzicht' && (
           <InsightsView
             items={items}
             wearLog={wearLog}
-            onItemsChange={setItems}
+            onArchiveChange={setArchived}
             onBuildAround={buildAround}
             lastBackup={lastBackup}
             onBackupMade={(time) => {
@@ -140,6 +181,8 @@ export default function App() {
           />
         )}
       </main>
+
+      <Toast toast={toast} onClose={dismiss} />
 
       <nav className="tabbar">
         {TABS.map((t) => (

@@ -3,7 +3,7 @@ import { detectColor } from '../data/detectColor';
 import { deletePhoto, savePhoto } from '../data/photos';
 import { resizeImage } from '../data/resizeImage';
 import { colorInfo } from '../outfit/colors';
-import { CATEGORIES, type Category, type ClothingItem } from '../types';
+import { CATEGORIES, categoryInfo, OCCASIONS, type Category, type ClothingItem } from '../types';
 import { BuyCheckSheet } from './BuyCheckSheet';
 import { ItemForm, type PhotoChange } from './ItemForm';
 import { ItemPhoto } from './ItemPhoto';
@@ -12,8 +12,23 @@ interface Props {
   /** Alle kleding, ook gearchiveerde (die tonen we hier niet, maar ze moeten bewaard blijven). */
   items: ClothingItem[];
   onItemsChange: (items: ClothingItem[]) => void;
+  /** Verwijderen (met "Ongedaan maken") */
+  onDeleteItem: (item: ClothingItem) => void;
+  /** Archiveren (met "Ongedaan maken") */
+  onArchiveItem: (item: ClothingItem) => void;
   /** Naar Vandaag met dit stuk vastgezet */
   onBuildAround: (item: ClothingItem) => void;
+}
+
+/** Kleine letters en zonder accenten, zodat "Bordeaux" ook "bordeaux" en "Rok/jurk" ook "jurk" vindt. */
+function normalize(text: string): string {
+  return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/** Alles waarop je een kledingstuk kunt vinden: naam, kleur, categorie en gelegenheden. */
+function searchText(item: ClothingItem): string {
+  const occasions = item.occasions.map((o) => OCCASIONS.find((x) => x.value === o)?.label ?? o);
+  return normalize([item.name, colorInfo(item.color).label, categoryInfo(item.category).label, ...occasions].join(' '));
 }
 
 const CATEGORY_ORDER = CATEGORIES.map((c) => c.value);
@@ -28,8 +43,9 @@ async function preparePhoto(file: File): Promise<Editing> {
   return { photo, color: color?.id };
 }
 
-export function WardrobeView({ items, onItemsChange, onBuildAround }: Props) {
+export function WardrobeView({ items, onItemsChange, onDeleteItem, onArchiveItem, onBuildAround }: Props) {
   const [filter, setFilter] = useState<Category | 'alle'>('alle');
+  const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<Editing | null>(null);
   // Wachtrij bij "Meerdere foto's": de foto's worden één voor één ingevuld.
   const [queue, setQueue] = useState<Editing[]>([]);
@@ -81,8 +97,11 @@ export function WardrobeView({ items, onItemsChange, onBuildAround }: Props) {
     input.value = '';
   }
 
+  // Elk woord moet ergens voorkomen: "zwart werk" vindt zwarte werkkleding.
+  const words = normalize(query).split(/\s+/).filter(Boolean);
   const visible = activeItems
     .filter((i) => filter === 'alle' || i.category === filter)
+    .filter((i) => words.every((word) => searchText(i).includes(word)))
     .sort(
       (a, b) =>
         CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category) ||
@@ -97,14 +116,12 @@ export function WardrobeView({ items, onItemsChange, onBuildAround }: Props) {
   }
 
   function handleDelete(item: ClothingItem) {
-    if (!window.confirm(`"${item.name}" verwijderen? Dit kan niet ongedaan worden gemaakt.`)) return;
-    onItemsChange(items.filter((i) => i.id !== item.id));
-    deletePhoto(item.id).catch(() => {});
+    onDeleteItem(item);
     setEditing(null);
   }
 
   function handleArchive(item: ClothingItem) {
-    onItemsChange(items.map((i) => (i.id === item.id ? { ...i, archived: true } : i)));
+    onArchiveItem(item);
     setEditing(null);
   }
 
@@ -142,6 +159,21 @@ export function WardrobeView({ items, onItemsChange, onBuildAround }: Props) {
       </div>
       {photoError && <p className="error">{photoError}</p>}
 
+      <div className="search-field">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Zoek op naam, kleur of gelegenheid"
+          aria-label="Zoeken in je kast"
+        />
+        {query && (
+          <button className="search-clear" onClick={() => setQuery('')} aria-label="Zoekveld leegmaken">
+            ✕
+          </button>
+        )}
+      </div>
+
       <div className="chips" role="group" aria-label="Filter op categorie">
         <button className={filter === 'alle' ? 'chip chip--active' : 'chip'} onClick={() => setFilter('alle')}>
           Alles <span className="chip-count">{activeItems.length}</span>
@@ -161,7 +193,9 @@ export function WardrobeView({ items, onItemsChange, onBuildAround }: Props) {
         <p className="empty">
           {activeItems.length === 0
             ? 'Je kast is nog leeg. Maak een foto van je eerste kledingstuk!'
-            : 'Niets in deze categorie.'}
+            : words.length > 0
+              ? `Niets gevonden voor "${query.trim()}".`
+              : 'Niets in deze categorie.'}
         </p>
       ) : (
         <ul className="item-grid">

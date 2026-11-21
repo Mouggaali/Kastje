@@ -50,6 +50,13 @@ export async function getAllPhotos(): Promise<[string, Blob][]> {
   return keys.map((key, i) => [String(key), blobs[i]]);
 }
 
+/** Wist foto's waar geen kledingstuk meer bij hoort. */
+export async function cleanupOrphanPhotos(itemIds: string[]): Promise<void> {
+  const keep = new Set(itemIds);
+  const keys = await run('readonly', (store) => store.getAllKeys());
+  for (const key of keys) if (!keep.has(String(key))) await deletePhoto(String(key));
+}
+
 /** Alle foto's wissen (voor het terugzetten van een back-up). */
 export async function clearPhotos(): Promise<void> {
   await run('readwrite', (store) => store.clear());

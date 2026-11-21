@@ -11,11 +11,13 @@ interface Props {
   outfits: SavedOutfit[];
   wearLog: WearLogEntry[];
   onOutfitsChange: (outfits: SavedOutfit[]) => void;
+  /** Verwijderen (met "Ongedaan maken") */
+  onDeleteOutfit: (outfit: SavedOutfit) => void;
   onLogWear: (date: string, itemIds: string[]) => void;
 }
 
 /** Je eigen, bewaarde outfits. */
-export function OutfitsView({ items, outfits, wearLog, onOutfitsChange, onLogWear }: Props) {
+export function OutfitsView({ items, outfits, wearLog, onOutfitsChange, onDeleteOutfit, onLogWear }: Props) {
   const [editing, setEditing] = useState<SavedOutfit | 'nieuw' | null>(null);
   const today = toDateString(new Date());
   const loggedToday = wearLog.find((entry) => entry.date === today)?.itemIds.join();
@@ -26,10 +28,7 @@ export function OutfitsView({ items, outfits, wearLog, onOutfitsChange, onLogWea
     setEditing(null);
   }
 
-  function handleDelete(outfit: SavedOutfit) {
-    if (!window.confirm(`Outfit "${outfit.name}" verwijderen? Je kleding blijft gewoon in je kast.`)) return;
-    onOutfitsChange(outfits.filter((o) => o.id !== outfit.id));
-  }
+  const handleDelete = onDeleteOutfit;
 
   return (
     <section className="view">

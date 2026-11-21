@@ -8,7 +8,8 @@ interface Props {
   /** Alle kleding, ook gearchiveerde */
   items: ClothingItem[];
   wearLog: WearLogEntry[];
-  onItemsChange: (items: ClothingItem[]) => void;
+  /** Archiveren of terugzetten (met "Ongedaan maken") */
+  onArchiveChange: (item: ClothingItem, archived: boolean) => void;
   onBuildAround: (item: ClothingItem) => void;
   lastBackup: number | null;
   onBackupMade: (time: number) => void;
@@ -23,7 +24,7 @@ function daysAgo(date: string, today: string): string {
 }
 
 /** Inzicht in je kast: wat draag je echt, wat slaapt, en wat kun je opruimen. */
-export function InsightsView({ items, wearLog, onItemsChange, onBuildAround, lastBackup, onBackupMade }: Props) {
+export function InsightsView({ items, wearLog, onArchiveChange, onBuildAround, lastBackup, onBackupMade }: Props) {
   const today = toDateString(new Date());
   const active = items.filter((i) => !i.archived);
   const archived = items.filter((i) => i.archived);
@@ -36,9 +37,7 @@ export function InsightsView({ items, wearLog, onItemsChange, onBuildAround, las
   const monthAgo = addDays(today, -30);
   const wornLast30 = new Set(wearLog.filter((e) => e.date > monthAgo).flatMap((e) => e.itemIds));
 
-  function setArchived(item: ClothingItem, archivedValue: boolean) {
-    onItemsChange(items.map((i) => (i.id === item.id ? { ...i, archived: archivedValue } : i)));
-  }
+  const setArchived = onArchiveChange;
 
   return (
     <section className="view">
