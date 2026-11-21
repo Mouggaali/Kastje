@@ -126,6 +126,16 @@ export interface SavedOutfit {
   createdAt: number;
 }
 
+/** Een geplande reis, met het weer op de bestemming en wat je al hebt ingepakt. */
+export interface Trip {
+  place: Place;
+  start: string;
+  end: string;
+  days: DayWeather[];
+  /** Ids van de stukken die je al hebt afgevinkt */
+  packed: string[];
+}
+
 export interface Place {
   name: string;
   latitude: number;

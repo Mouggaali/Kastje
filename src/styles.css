@@ -531,6 +531,20 @@ p.badge { margin: 0 0 8px; }
 }
 .plan-tip { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }
 
+/* ---------- Reis en paklijst ---------- */
+
+.date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pack-group h3 { margin: 12px 0 4px; font-size: 14px; color: var(--ink-soft); font-weight: 600; }
+.pack-list { list-style: none; margin: 0; padding: 0; }
+.pack-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 6px 0; border-bottom: 1px solid var(--line); cursor: pointer;
+}
+.pack-item input { width: 22px; height: 22px; flex: none; accent-color: var(--accent); }
+.pack-item--done .item-name { text-decoration: line-through; color: var(--ink-soft); }
+.trip-day { display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.trip-day .muted { margin: 0; font-size: 13px; }
+
 /* ---------- Zoeken ---------- */
 
 .search-field { position: relative; margin: 0 0 12px; }

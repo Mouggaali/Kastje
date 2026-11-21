@@ -7,6 +7,7 @@ import type {
   Place,
   PlannedDay,
   SavedOutfit,
+  Trip,
   WearLogEntry,
 } from '../types';
 import { sampleItems } from './sampleItems';
@@ -21,6 +22,7 @@ const KEYS = {
   occasion: 'kastje.occasion',
   weatherCache: 'kastje.weatherCache',
   lastBackup: 'kastje.lastBackup',
+  trip: 'kastje.trip',
 };
 
 function read<T>(key: string, fallback: T): T {
@@ -109,6 +111,15 @@ export function loadOccasion(): Occasion | null {
 
 export function saveOccasion(occasion: Occasion | null): void {
   write(KEYS.occasion, occasion);
+}
+
+export function loadTrip(): Trip | null {
+  return read<Trip | null>(KEYS.trip, null);
+}
+
+export function saveTrip(trip: Trip | null): void {
+  if (trip) write(KEYS.trip, trip);
+  else localStorage.removeItem(KEYS.trip);
 }
 
 /** Wanneer je voor het laatst een back-up maakte (ms), of null. */

@@ -1,11 +1,21 @@
 import { useState } from 'react';
 import { outfitItems, piecesToIds, resolveSavedOutfit, suggestOutfit } from '../outfit/outfitLogic';
-import type { ClothingItem, DayWeather, Occasion, OutfitVote, PlannedDay, SavedOutfit, WearLogEntry } from '../types';
+import type {
+  ClothingItem,
+  DayWeather,
+  Occasion,
+  OutfitVote,
+  PlannedDay,
+  SavedOutfit,
+  Trip,
+  WearLogEntry,
+} from '../types';
 import { describeWeather } from '../weather/openMeteo';
 import { weatherTips } from '../weather/tips';
 import type { WeatherState } from '../weather/useWeather';
 import { OutfitBuilder } from './OutfitBuilder';
 import { OutfitCollage } from './OutfitCollage';
+import { TripSheet } from './TripSheet';
 
 interface Props {
   items: ClothingItem[];
@@ -15,6 +25,8 @@ interface Props {
   weather: WeatherState;
   plan: PlannedDay[];
   onPlanChange: (plan: PlannedDay[]) => void;
+  trip: Trip | null;
+  onTripChange: (trip: Trip | null) => void;
   onOpenToday: () => void;
 }
 
@@ -31,15 +43,34 @@ function weatherLine(w: DayWeather): string {
 }
 
 /** Plan je outfits voor de komende week, met het weerbericht erbij. */
-export function PlanView({ items, wearLog, votes, occasion, weather, plan, onPlanChange, onOpenToday }: Props) {
+export function PlanView(props: Props) {
+  const { items, wearLog, votes, occasion, weather, plan, onPlanChange, trip, onTripChange, onOpenToday } = props;
   const [editing, setEditing] = useState<{ day: DayWeather; index: number } | null>(null);
+  const [tripOpen, setTripOpen] = useState(false);
+
+  const tripButton = (
+    <button className="button button--secondary button--small" onClick={() => setTripOpen(true)}>
+      🧳 {trip ? `Reis naar ${trip.place.name.split(',')[0]}` : 'Reis plannen'}
+    </button>
+  );
+  const tripSheet = tripOpen && (
+    <TripSheet
+      items={items}
+      occasion={occasion}
+      trip={trip}
+      onTripChange={onTripChange}
+      onClose={() => setTripOpen(false)}
+    />
+  );
 
   if (!weather.days) {
     return (
       <section className="view">
         <div className="view-header">
           <h1>Plannen</h1>
+          {tripButton}
         </div>
+        {tripSheet}
         <p className="empty">
           {weather.status === 'loading' || weather.status === 'locating'
             ? 'Weer ophalen…'
@@ -71,7 +102,9 @@ export function PlanView({ items, wearLog, votes, occasion, weather, plan, onPla
     <section className="view">
       <div className="view-header">
         <h1>Plannen</h1>
+        {tripButton}
       </div>
+      {tripSheet}
       <p className="muted">Plan je outfits voor de komende week. Ik stel per dag iets voor dat bij het weer past.</p>
 
       <ul className="plan-list">
@@ -94,11 +127,7 @@ export function PlanView({ items, wearLog, votes, occasion, weather, plan, onPla
                   {hasPieces ? 'Wijzig' : 'Plan'}
                 </button>
               </div>
-              {hasPieces ? (
-                <OutfitCollage pieces={pieces} compact />
-              ) : (
-                <p className="hint">Nog niets gepland.</p>
-              )}
+              {hasPieces ? <OutfitCollage pieces={pieces} compact /> : <p className="hint">Nog niets gepland.</p>}
             </li>
           );
         })}

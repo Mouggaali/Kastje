@@ -12,6 +12,7 @@ import {
   loadOccasion,
   loadPlan,
   loadSavedOutfits,
+  loadTrip,
   loadVotes,
   loadWearLog,
   saveItems,
@@ -19,10 +20,11 @@ import {
   saveOccasion,
   savePlan,
   saveSavedOutfits,
+  saveTrip,
   saveVotes,
   saveWearLog,
 } from './data/storage';
-import type { ClothingItem, Occasion, OutfitVote, PlannedDay, SavedOutfit, WearLogEntry } from './types';
+import type { ClothingItem, Occasion, OutfitVote, PlannedDay, SavedOutfit, Trip, WearLogEntry } from './types';
 import { useWeather } from './weather/useWeather';
 
 type Tab = 'vandaag' | 'plannen' | 'outfits' | 'kast' | 'inzicht';
@@ -49,6 +51,7 @@ export default function App() {
   // Het stuk waar de outfit omheen gebouwd wordt (📌)
   const [anchorId, setAnchorId] = useState<string | null>(null);
   const [lastBackup, setLastBackup] = useState<number | null>(loadLastBackup);
+  const [trip, setTrip] = useState<Trip | null>(loadTrip);
   // Moment waarop de app opende; voor de back-upherinnering (Date.now mag niet tijdens het renderen).
   const [openedAt] = useState(() => Date.now());
   const weather = useWeather();
@@ -60,6 +63,7 @@ export default function App() {
   useEffect(() => saveVotes(votes), [votes]);
   useEffect(() => savePlan(plan), [plan]);
   useEffect(() => saveOccasion(occasion), [occasion]);
+  useEffect(() => saveTrip(trip), [trip]);
 
   // Gearchiveerde kleding doet niet mee in suggesties, outfits en planning.
   // useMemo: alleen een nieuwe lijst als de kast echt verandert, anders zou Vandaag
@@ -145,6 +149,8 @@ export default function App() {
             weather={weather}
             plan={plan}
             onPlanChange={setPlan}
+            trip={trip}
+            onTripChange={setTrip}
             onOpenToday={() => setTab('vandaag')}
           />
         )}

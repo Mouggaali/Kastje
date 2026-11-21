@@ -17,16 +17,27 @@ export interface HourlyData {
   weather_code: number[];
 }
 
-/** Haalt het weer op voor vandaag en de 6 dagen erna (voor de weekplanner). */
-export async function fetchWeather(place: Place, days = 7): Promise<DayWeather[]> {
+/** Open-Meteo voorspelt maximaal zoveel dagen vooruit (vandaag meegeteld). */
+export const MAX_FORECAST_DAYS = 16;
+
+/**
+ * Haalt het weer op. Standaard vandaag en de 6 dagen erna (voor de weekplanner);
+ * met `range` een vaste periode, bijvoorbeeld voor een reis.
+ */
+export async function fetchWeather(place: Place, range?: { start: string; end: string }): Promise<DayWeather[]> {
   const params = new URLSearchParams({
     latitude: String(place.latitude),
     longitude: String(place.longitude),
     hourly: 'apparent_temperature,precipitation_probability,wind_speed_10m,weather_code',
     wind_speed_unit: 'kmh',
     timezone: 'auto',
-    forecast_days: String(days),
   });
+  if (range) {
+    params.set('start_date', range.start);
+    params.set('end_date', range.end);
+  } else {
+    params.set('forecast_days', '7');
+  }
   const response = await fetch(`${FORECAST_URL}?${params}`);
   if (!response.ok) throw new Error(`Open-Meteo gaf fout ${response.status}`);
   const data = (await response.json()) as { hourly: HourlyData };
