@@ -23,6 +23,12 @@ describe('buyCheck', () => {
     expect(result.reason).toContain('navy trui');
   });
 
+  it('een gestreepte trui is niet "hetzelfde" als een effen trui', () => {
+    const result = buyCheck({ category: 'trui', color: 'navy', warmth: 4, pattern: 'gestreept' }, closet);
+    expect(result.similar).toEqual([]);
+    expect(result.verdict).not.toBe('skip');
+  });
+
   it('"Koop het" als het nieuw is en met veel combineert', () => {
     const result = buyCheck({ category: 'shirt', color: 'bordeaux', warmth: 2 }, closet);
     expect(result.verdict).toBe('koop');

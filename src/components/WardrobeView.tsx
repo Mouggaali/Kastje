@@ -1,9 +1,9 @@
 import { useState, type ChangeEvent } from 'react';
-import { detectColor } from '../data/detectColor';
+import { detectColors } from '../data/detectColor';
 import { deletePhoto, savePhoto } from '../data/photos';
 import { resizeImage } from '../data/resizeImage';
-import { colorInfo } from '../outfit/colors';
-import { CATEGORIES, categoryInfo, OCCASIONS, type Category, type ClothingItem } from '../types';
+import { colorInfo, itemColors } from '../outfit/colors';
+import { CATEGORIES, categoryInfo, OCCASIONS, PATTERNS, type Category, type ClothingItem } from '../types';
 import { BuyCheckSheet } from './BuyCheckSheet';
 import { ItemForm, type PhotoChange } from './ItemForm';
 import { ItemPhoto } from './ItemPhoto';
@@ -20,6 +20,12 @@ interface Props {
   onBuildAround: (item: ClothingItem) => void;
 }
 
+/** Kleurstip: bij twee kleuren een stip met twee helften. */
+function dotBackground(item: ClothingItem): string {
+  const [first, second] = itemColors(item).map((c) => colorInfo(c).hex);
+  return second ? `linear-gradient(90deg, ${first} 50%, ${second} 50%)` : first;
+}
+
 /** Kleine letters en zonder accenten, zodat "Bordeaux" ook "bordeaux" en "Rok/jurk" ook "jurk" vindt. */
 function normalize(text: string): string {
   return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -28,21 +34,23 @@ function normalize(text: string): string {
 /** Alles waarop je een kledingstuk kunt vinden: naam, kleur, categorie en gelegenheden. */
 function searchText(item: ClothingItem): string {
   const occasions = item.occasions.map((o) => OCCASIONS.find((x) => x.value === o)?.label ?? o);
-  return normalize([item.name, colorInfo(item.color).label, categoryInfo(item.category).label, ...occasions].join(' '));
+  const pattern = PATTERNS.find((p) => p.value === item.pattern)?.label ?? '';
+  const colors = itemColors(item).map((c) => colorInfo(c).label);
+  return normalize([item.name, ...colors, categoryInfo(item.category).label, pattern, ...occasions].join(' '));
 }
 
 const CATEGORY_ORDER = CATEGORIES.map((c) => c.value);
 
 /** Wat er in het formulier open staat: een bestaand stuk, of een nieuw stuk (eventueel met foto). */
-type Editing = { item?: ClothingItem; photo?: Blob; color?: string; source?: Blob };
+type Editing = { item?: ClothingItem; photo?: Blob; color?: string; color2?: string; source?: Blob };
 
 /** Verkleint een foto en herkent de kleur. */
 async function preparePhoto(file: File): Promise<Editing> {
   // Een scherpe versie om eventueel uit bij te snijden, en de gewone foto (800 px) om op te slaan.
   const source = await resizeImage(file, 1600);
   const photo = await resizeImage(source);
-  const color = await detectColor(photo).catch(() => undefined);
-  return { photo, color: color?.id, source };
+  const colors = await detectColors(photo).catch(() => undefined);
+  return { photo, color: colors?.primary.id, color2: colors?.secondary?.id, source };
 }
 
 export function WardrobeView({ items, onItemsChange, onDeleteItem, onArchiveItem, onBuildAround }: Props) {
@@ -202,15 +210,17 @@ export function WardrobeView({ items, onItemsChange, onDeleteItem, onArchiveItem
       ) : (
         <ul className="item-grid">
           {visible.map((item) => {
-            const color = colorInfo(item.color);
             return (
               <li key={item.id}>
                 <button className="item-card" onClick={() => setEditing({ item })}>
                   <ItemPhoto item={item} />
                   <span className="item-name">{item.name}</span>
                   <span className="item-meta">
-                    <span className="color-dot" style={{ background: color.hex }} />
-                    {color.label} · warmte {item.warmth}
+                    <span className="color-dot" style={{ background: dotBackground(item) }} />
+                    {itemColors(item)
+                      .map((c, i) => (i === 0 ? colorInfo(c).label : colorInfo(c).label.toLowerCase()))
+                      .join('/')}
+                    {item.pattern && item.pattern !== 'effen' && `, ${item.pattern}`} · warmte {item.warmth}
                     {item.waterproof && ' · 💧'}
                   </span>
                 </button>
@@ -226,6 +236,7 @@ export function WardrobeView({ items, onItemsChange, onDeleteItem, onArchiveItem
           initialPhoto={editing.photo}
           initialColor={editing.color}
           initialSource={editing.source}
+          initialSecondColor={editing.color2}
           onSave={async (saved, photo) => {
             await saveItem(saved, photo);
             setEditing(null);
@@ -243,6 +254,7 @@ export function WardrobeView({ items, onItemsChange, onDeleteItem, onArchiveItem
           initialPhoto={queued.photo}
           initialColor={queued.color}
           initialSource={queued.source}
+          initialSecondColor={queued.color2}
           progress={`Foto ${queueTotal - queue.length + 1} van ${queueTotal}`}
           onSave={async (saved, photo) => {
             await saveItem(saved, photo);

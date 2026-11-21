@@ -84,13 +84,15 @@ Kastje heeft vijf tabbladen: **Vandaag · Plannen · Outfits · Kast · Inzicht*
   - **🧳 Reis plannen:** kies een bestemming en data (tot 16 dagen vooruit). Kastje haalt het weer daar op, maakt per dag een outfit en één **paklijst** om af te vinken. Dagen met vergelijkbaar weer krijgen dezelfde kleding, zodat je koffer klein blijft.
 - **👗 Outfits:** stel zelf outfits samen. Tik per onderdeel (bovenstuk, laag eronder, onderstuk, schoenen, jas, accessoires) op een foto. Bovenaan zie je direct hoe het samen staat, met de harmoniescore.
 - **🧥 Kast:**
-  - **Zoeken** op naam, kleur, categorie of gelegenheid ("zwart werk").
+  - **Zoeken** op naam, kleur, patroon, categorie of gelegenheid ("zwart werk", "streep wit").
+  - **✂️ Bijsnijden:** sleep, zoom en draai je foto tot het kledingstuk mooi in het vierkant past. Daarna wordt de kleur opnieuw herkend; zonder vloer eromheen is dat nauwkeuriger.
+  - **Patroon en tweede kleur:** geef aan of iets effen, gestreept, geruit, gestippeld of geprint is. Ziet Kastje een tweede kleur in de foto (bijvoorbeeld wit bij een navy-wit gestreept shirt), dan stelt hij die voor. De harmoniescore houdt er rekening mee: één druk patroon is prima, twee botsen.
   - **📷 Foto maken** opent de camera. Leg het kledingstuk op een rustige ondergrond, midden in beeld. Kastje verkleint de foto, herkent de kleur en opent het formulier. Vul daarna de naam, categorie, warmte (1–5), waterdicht, gelegenheden en eventueel de prijs in.
   - **🖼️ Meerdere foto's:** kies een hele reeks foto's tegelijk en loop ze één voor één door ("Foto 2 van 5"), met de kleur al herkend.
   - **🛍️ Koop-check:** twijfel je in de winkel? Maak een foto. Kastje zegt **Koop het**, **Twijfel** of **Sla over**: heb je al iets vergelijkbaars, en in hoeveel goede outfits past het?
   - Tik op een stuk om het te bewerken, te archiveren, of **✨ een outfit rond dit stuk** te maken.
   - Verwijderd of gearchiveerd per ongeluk? Tik binnen 6 seconden op **Ongedaan maken** in de melding onderin.
-- **📊 Inzicht:** hoeveel van je kast je echt draagt, je meest gedragen stukken, **slapers** (30+ dagen niet gedragen), je kleurverdeling, de prijs per keer dragen, gearchiveerde stukken die je kunt terugzetten, en je **back-up**.
+- **📊 Inzicht:** bovenaan het **draagdagboek**: een kalender met wat je elke dag droeg. Tik op een dag om hem te bekijken, of om een vergeten dag toe te voegen, te wijzigen of te wissen. Daaronder: hoeveel van je kast je echt draagt, je meest gedragen stukken, **slapers** (30+ dagen niet gedragen), je kleurverdeling, de prijs per keer dragen, gearchiveerde stukken die je kunt terugzetten, en je **back-up**.
 
 De kleurherkenning gebeurt op je eigen apparaat: Kastje kijkt naar de meest voorkomende kleur in het midden van de foto. Er gaat geen foto naar een externe dienst.
 

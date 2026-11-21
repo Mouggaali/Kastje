@@ -21,7 +21,7 @@ import {
   type SavedOutfit,
   type WearLogEntry,
 } from '../types';
-import { colorsClash } from './colors';
+import { colorsClash, itemColors } from './colors';
 import { harmonyScore, type Harmony } from './harmony';
 
 // ---------- Instellingen (hier kun je aan draaien) ----------
@@ -227,8 +227,8 @@ function pickForSlot(
     .sort((a, b) => a.points - b.points)
     .map((entry) => entry.item);
   // Harde regel: liefst geen twee felle kleuren; lukt dat niet, dan toch het beste stuk.
-  const colors = chosen.map((i) => i.color);
-  return ranked.find((item) => !colorsClash([...colors, item.color])) ?? ranked[0];
+  const colors = chosen.flatMap(itemColors);
+  return ranked.find((item) => !colorsClash([...colors, ...itemColors(item)])) ?? ranked[0];
 }
 
 /** De hoofdstukken (zonder accessoires) in vaste volgorde: boven, laag, onder, schoenen, jas. */

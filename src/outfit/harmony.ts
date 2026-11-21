@@ -9,7 +9,10 @@
  * - Tinten daartussenin botsen sneller, en twee felle kleuren botsen bijna altijd.
  */
 import type { ClothingItem } from '../types';
-import { colorInfo } from './colors';
+import { colorInfo, itemColors } from './colors';
+
+/** Strafpunten per extra druk patroon in één outfit. */
+const BUSY_PATTERN_PENALTY = 25;
 
 export interface Harmony {
   score: number;
@@ -48,7 +51,8 @@ function labelFor(score: number): string {
 }
 
 export function harmonyScore(items: ClothingItem[]): Harmony {
-  const colors = items.map((item) => colorInfo(item.color));
+  // De tweede kleur (bijv. wit bij een navy-wit gestreept shirt) telt gewoon mee.
+  const colors = items.flatMap(itemColors).map(colorInfo);
   const accents = colors.filter((c) => c.kind !== 'neutraal');
   const bright = colors.filter((c) => c.kind === 'fel').length;
 
@@ -88,6 +92,15 @@ export function harmonyScore(items: ClothingItem[]): Harmony {
   if (bright > 1) {
     score -= 35 * (bright - 1);
     reason = bright === 2 ? 'Twee felle kleuren botsen' : 'Te veel felle kleuren';
+  }
+
+  // Patronen: één druk stuk (strepen, ruit, print, stippen) met verder effen is prima; meer wordt onrustig.
+  const busy = items.filter((item) => item.pattern && item.pattern !== 'effen').length;
+  if (busy > 1) {
+    score -= BUSY_PATTERN_PENALTY * (busy - 1);
+    reason = busy === 2 ? 'Twee drukke patronen botsen' : 'Te veel drukke patronen';
+  } else if (busy === 1 && score >= 85) {
+    reason += ', met één patroon';
   }
 
   score = Math.max(0, Math.min(100, score));

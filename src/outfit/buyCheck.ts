@@ -5,7 +5,7 @@
  * 2. Met hoeveel van je kleding vormt het een outfit waarvan de kleuren goed samengaan?
  */
 import { colorDistance, hexToRgb } from '../data/detectColor';
-import type { Category, ClothingItem, Warmth } from '../types';
+import type { Category, ClothingItem, Pattern, Warmth } from '../types';
 import { colorInfo } from './colors';
 import { harmonyScore } from './harmony';
 import { outfitItems, SLOT_CATEGORIES, slotOf, type OutfitPieces, type Slot } from './outfitLogic';
@@ -21,6 +21,8 @@ export interface BuyCandidate {
   category: Category;
   color: string;
   warmth: Warmth;
+  /** Zonder waarde = effen */
+  pattern?: Pattern;
 }
 
 export type Verdict = 'koop' | 'twijfel' | 'skip';
@@ -57,6 +59,7 @@ export function buyCheck(candidate: BuyCandidate, items: ClothingItem[]): BuyChe
     (i) =>
       i.category === candidate.category &&
       colorsAlike(i.color, candidate.color) &&
+      (i.pattern ?? 'effen') === (candidate.pattern ?? 'effen') &&
       Math.abs(i.warmth - candidate.warmth) <= 1,
   );
 

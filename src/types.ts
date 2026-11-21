@@ -62,10 +62,25 @@ export const ACCESSORY_TYPES: { value: AccessoryType; label: string; hint?: stri
   { value: 'anders', label: 'Anders' },
 ];
 
+/** Patroon van een kledingstuk. Zonder patroon = effen. */
+export type Pattern = 'effen' | 'gestreept' | 'geruit' | 'print' | 'stippen';
+
+export const PATTERNS: { value: Pattern; label: string }[] = [
+  { value: 'effen', label: 'Effen' },
+  { value: 'gestreept', label: 'Gestreept' },
+  { value: 'geruit', label: 'Geruit' },
+  { value: 'stippen', label: 'Stippen' },
+  { value: 'print', label: 'Print' },
+];
+
 export interface ClothingItem {
   id: string;
   name: string;
   category: Category;
+  /** Zonder waarde = effen */
+  pattern?: Pattern;
+  /** Tweede kleur, bijv. wit bij een navy-wit gestreept shirt */
+  color2?: string;
   /** Alleen bij categorie "accessoire" */
   accessoryType?: AccessoryType;
   /** Voor welke gelegenheden je dit draagt */

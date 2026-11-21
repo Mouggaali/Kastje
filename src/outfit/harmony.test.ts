@@ -37,6 +37,32 @@ describe('harmonyScore', () => {
   });
 });
 
+describe('patronen en tweede kleur', () => {
+  const piece = (color: string, extra: Partial<ClothingItem> = {}) => ({ id: color, color, ...extra }) as ClothingItem;
+
+  it('één patroon met verder effen stukken is prima', () => {
+    const h = harmonyScore([piece('navy', { pattern: 'gestreept', color2: 'wit' }), piece('denim'), piece('wit')]);
+    expect(h.score).toBe(90);
+    expect(h.reason).toBe('Rustig en tijdloos: alleen neutrale kleuren, met één patroon');
+  });
+
+  it('twee drukke patronen botsen', () => {
+    const h = harmonyScore([piece('navy', { pattern: 'gestreept', color2: 'wit' }), piece('grijs', { pattern: 'geruit' })]);
+    expect(h.score).toBe(65);
+    expect(h.reason).toBe('Twee drukke patronen botsen');
+  });
+
+  it('de tweede kleur telt mee bij felle kleuren', () => {
+    // Rood-wit gestreept shirt met een gele broek: rood en geel zijn allebei fel
+    const h = harmonyScore([piece('wit', { color2: 'rood', pattern: 'gestreept' }), piece('geel')]);
+    expect(h.reason).toBe('Twee felle kleuren botsen');
+  });
+
+  it('effen zonder waarde (oude gegevens) telt niet als patroon', () => {
+    expect(harmonyScore([piece('navy'), piece('grijs', { pattern: 'effen' })]).score).toBe(90);
+  });
+});
+
 describe('hueOf', () => {
   it('rekent tinten uit', () => {
     expect(Math.round(hueOf('#ff0000'))).toBe(0);

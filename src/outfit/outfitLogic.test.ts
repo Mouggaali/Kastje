@@ -100,6 +100,17 @@ describe('suggestOutfit', () => {
     expect(outfit.bottom?.id).toBe('zwarte short');
   });
 
+  it('telt de tweede kleur mee bij "maximaal één felle kleur"', () => {
+    const items = [
+      item('wit-rood shirt', 'shirt', 1, { color: 'wit', color2: 'rood', pattern: 'gestreept' }),
+      item('gele short', 'broek', 1, { color: 'geel' }), // past qua warmte het best, maar geel + rood botst
+      item('zwarte short', 'broek', 2, { color: 'zwart' }),
+      item('sneakers', 'schoenen', 1, { color: 'wit' }),
+    ];
+    const outfit = suggestOutfit({ items, weather: weather(25), wearLog: [], date: TODAY, random: noRandom });
+    expect(outfit.bottom?.id).toBe('zwarte short');
+  });
+
   it('zet stukken die je de afgelopen 3 dagen droeg achteraan', () => {
     const items = [item('shirt A', 'shirt', 1), item('shirt B', 'shirt', 1)];
     const yesterday = [{ date: addDays(TODAY, -1), itemIds: ['shirt A'] }];

@@ -4,7 +4,7 @@ import { useObjectUrl } from '../data/useObjectUrl';
 import { resizeImage } from '../data/resizeImage';
 import { buyCheck } from '../outfit/buyCheck';
 import { COLORS, colorInfo } from '../outfit/colors';
-import { CATEGORIES, type Category, type ClothingItem, type Warmth } from '../types';
+import { CATEGORIES, PATTERNS, type Category, type ClothingItem, type Pattern, type Warmth } from '../types';
 import { ItemPhoto } from './ItemPhoto';
 import { OutfitCollage } from './OutfitCollage';
 
@@ -24,6 +24,7 @@ export function BuyCheckSheet({ items, onClose, onAddToWardrobe }: Props) {
   const [color, setColor] = useState('zwart');
   const [category, setCategory] = useState<Category>('shirt');
   const [warmth, setWarmth] = useState<Warmth>(2);
+  const [pattern, setPattern] = useState<Pattern>('effen');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -46,7 +47,7 @@ export function BuyCheckSheet({ items, onClose, onAddToWardrobe }: Props) {
     }
   }
 
-  const result = photo ? buyCheck({ category, color, warmth }, items) : null;
+  const result = photo ? buyCheck({ category, color, warmth, pattern }, items) : null;
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>
@@ -110,6 +111,23 @@ export function BuyCheckSheet({ items, onClose, onAddToWardrobe }: Props) {
                     <input type="radio" name="buy-warmth" checked={warmth === level} onChange={() => setWarmth(level)} />
                     <span>{level}</span>
                   </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset className="field">
+              <legend>Patroon</legend>
+              <div className="chip-row">
+                {PATTERNS.map((p) => (
+                  <button
+                    type="button"
+                    key={p.value}
+                    className={pattern === p.value ? 'chip chip--active' : 'chip'}
+                    aria-pressed={pattern === p.value}
+                    onClick={() => setPattern(p.value)}
+                  >
+                    {p.label}
+                  </button>
                 ))}
               </div>
             </fieldset>

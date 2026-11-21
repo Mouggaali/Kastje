@@ -40,6 +40,11 @@ export function isBright(colorId: string): boolean {
   return colorInfo(colorId).kind === 'fel';
 }
 
+/** Alle kleuren van een kledingstuk: de hoofdkleur en eventueel een tweede kleur. */
+export function itemColors(item: { color: string; color2?: string }): string[] {
+  return item.color2 && item.color2 !== item.color ? [item.color, item.color2] : [item.color];
+}
+
 /** Kleuren clashen als er meer dan één felle kleur tussen zit. */
 export function colorsClash(colorIds: string[]): boolean {
   return colorIds.filter(isBright).length > 1;

@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { detectColor } from '../data/detectColor';
+import { detectColors } from '../data/detectColor';
 import { getPhoto } from '../data/photos';
 import { useObjectUrl } from '../data/useObjectUrl';
 import { resizeImage } from '../data/resizeImage';
@@ -9,11 +9,13 @@ import {
   ACCESSORY_TYPES,
   CATEGORIES,
   OCCASIONS,
+  PATTERNS,
   WARMTH_LABELS,
   type AccessoryType,
   type Category,
   type ClothingItem,
   type Occasion,
+  type Pattern,
   type Warmth,
 } from '../types';
 import { ItemPhoto } from './ItemPhoto';
@@ -30,6 +32,8 @@ interface Props {
   initialColor?: string;
   /** Scherpere versie van die foto (tot 1600 px), om uit bij te snijden */
   initialSource?: Blob;
+  /** Tweede kleur die in die foto is gezien (alleen een voorstel) */
+  initialSecondColor?: string;
   onSave: (item: ClothingItem, photo: PhotoChange) => Promise<void>;
   onDelete?: () => void;
   /** Opruimen zonder te verwijderen */
@@ -51,7 +55,7 @@ function colorHintText(colorId: string) {
 }
 
 export function ItemForm(props: Props) {
-  const { item, initialPhoto, initialColor, initialSource } = props;
+  const { item, initialPhoto, initialColor, initialSource, initialSecondColor } = props;
   const { onSave, onDelete, onArchive, onBuildAround, progress, onSkip, onCancel } = props;
   const [name, setName] = useState(item?.name ?? '');
   const [category, setCategory] = useState<Category>(item?.category ?? 'shirt');
@@ -62,6 +66,10 @@ export function ItemForm(props: Props) {
   // Bij een bestaand stuk heb je de kleur al gekozen; dan veranderen we hem niet automatisch.
   const [colorChosen, setColorChosen] = useState(!!item);
   const [colorHint, setColorHint] = useState(initialColor ? colorHintText(initialColor) : '');
+  const [pattern, setPattern] = useState<Pattern>(item?.pattern ?? 'effen');
+  const [color2, setColor2] = useState<string | null>(item?.color2 ?? null);
+  // Een tweede kleur die we in de foto zagen; pas na jouw bevestiging wordt het de tweede kleur.
+  const [secondSuggestion, setSecondSuggestion] = useState<string | null>(item?.color2 ? null : (initialSecondColor ?? null));
   const [warmth, setWarmth] = useState<Warmth>(item?.warmth ?? 3);
   const [waterproof, setWaterproof] = useState(item?.waterproof ?? false);
   const [photo, setPhoto] = useState<PhotoChange>(initialPhoto ? { kind: 'new', blob: initialPhoto } : { kind: 'keep' });
@@ -75,12 +83,13 @@ export function ItemForm(props: Props) {
 
   /** Kleur uit de foto voorstellen, zolang je de kleur nog niet zelf koos. */
   async function suggestColor(blob: Blob) {
-    if (colorChosen) return;
-    const detected = await detectColor(blob).catch(() => null);
-    if (detected) {
-      setColor(detected.id);
-      setColorHint(colorHintText(detected.id));
+    const detected = await detectColors(blob).catch(() => null);
+    if (!detected) return;
+    if (!colorChosen) {
+      setColor(detected.primary.id);
+      setColorHint(colorHintText(detected.primary.id));
     }
+    if (!color2) setSecondSuggestion(detected.secondary?.id ?? null);
   }
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
@@ -152,6 +161,8 @@ export function ItemForm(props: Props) {
           name: name.trim(),
           category,
           accessoryType: category === 'accessoire' ? accessoryType : undefined,
+          pattern: pattern === 'effen' ? undefined : pattern,
+          color2: color2 && color2 !== color ? color2 : undefined,
           occasions,
           price: parsedPrice,
           createdAt: item?.createdAt ?? Date.now(),
@@ -264,6 +275,60 @@ export function ItemForm(props: Props) {
                   checked={color === c.id}
                   onChange={() => chooseColor(c.id)}
                 />
+                <span className="swatch-dot" style={{ background: c.hex }} />
+                <span className="swatch-label">{c.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="field">
+          <legend>Patroon</legend>
+          <div className="chip-row">
+            {PATTERNS.map((p) => (
+              <button
+                type="button"
+                key={p.value}
+                className={pattern === p.value ? 'chip chip--active' : 'chip'}
+                aria-pressed={pattern === p.value}
+                onClick={() => setPattern(p.value)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="field">
+          <legend>Tweede kleur: {color2 ? colorInfo(color2).label.toLowerCase() : 'geen'}</legend>
+          {secondSuggestion && !color2 && (
+            <p className="hint hint--accent second-hint">
+              Ik zie ook {colorInfo(secondSuggestion).label.toLowerCase()} in de foto. Is dat een tweede kleur, bijvoorbeeld
+              bij strepen?{' '}
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => {
+                  setColor2(secondSuggestion);
+                  setSecondSuggestion(null);
+                }}
+              >
+                Ja, toevoegen
+              </button>
+            </p>
+          )}
+          <div className="swatches">
+            <button
+              type="button"
+              className={color2 ? 'chip' : 'chip chip--active'}
+              aria-pressed={!color2}
+              onClick={() => setColor2(null)}
+            >
+              Geen
+            </button>
+            {COLORS.filter((c) => c.id !== color).map((c) => (
+              <label key={c.id} className="swatch" title={c.label}>
+                <input type="radio" name="color2" checked={color2 === c.id} onChange={() => setColor2(c.id)} />
                 <span className="swatch-dot" style={{ background: c.hex }} />
                 <span className="swatch-label">{c.label}</span>
               </label>

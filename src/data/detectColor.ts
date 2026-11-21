@@ -5,7 +5,7 @@
 // 2. Verklein dat tot 40×40 pixels.
 // 3. Deel de pixels in grove kleurgroepen in en neem de grootste groep.
 // 4. Zoek in onze kleurenlijst de kleur die daar het dichtst bij ligt.
-import { COLORS, type ColorOption } from '../outfit/colors';
+import { colorInfo, COLORS, type ColorOption } from '../outfit/colors';
 
 export type Rgb = [number, number, number];
 
@@ -72,15 +72,52 @@ export function nearestColor(rgb: Rgb): ColorOption {
   return best;
 }
 
-/** Herkent de hoofdkleur van een foto en geeft de dichtstbijzijnde kleur uit de lijst. */
-export async function detectColor(photo: Blob): Promise<ColorOption> {
+/** Een tweede kleur telt pas mee als die minstens zo'n groot deel van het midden van de foto beslaat. */
+const SECOND_COLOR_SHARE = 0.2;
+
+/**
+ * De twee meest voorkomende kleuren uit onze lijst.
+ * Elke pixel telt voor de dichtstbijzijnde kleur uit de lijst; zo tellen tinten van
+ * hetzelfde wit (in licht en schaduw) samen als "wit".
+ */
+export function pickTopColorIds(pixels: ArrayLike<number>): { primary: string; secondary?: string } {
+  const ranked = rankColorIds(pixels);
+  if (ranked.length === 0) return { primary: nearestColor([128, 128, 128]).id };
+  const [primary] = ranked[0];
+  const second = ranked[1];
+  return second && second[1] >= SECOND_COLOR_SHARE ? { primary, secondary: second[0] } : { primary };
+}
+
+/** Alle kleuren uit onze lijst met hun aandeel (0–1), van groot naar klein. */
+function rankColorIds(pixels: ArrayLike<number>): [string, number][] {
+  const counts = new Map<string, number>();
+  let total = 0;
+  // Per groep van gelijke kleuren eenmaal de dichtstbijzijnde kleur opzoeken (sneller dan per pixel).
+  const cache = new Map<number, string>();
+  for (let i = 0; i + 3 < pixels.length; i += 4) {
+    if (pixels[i + 3] < 128) continue;
+    const key = ((pixels[i] >> 3) << 10) | ((pixels[i + 1] >> 3) << 5) | (pixels[i + 2] >> 3);
+    let id = cache.get(key);
+    if (!id) {
+      id = nearestColor([pixels[i], pixels[i + 1], pixels[i + 2]]).id;
+      cache.set(key, id);
+    }
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+    total++;
+  }
+  return [...counts.entries()].map(([id, n]): [string, number] => [id, n / total]).sort((a, b) => b[1] - a[1]);
+}
+
+/** Pixels uit het midden van de foto (40×40), waar meestal het kledingstuk zit. */
+async function centerPixels(photo: Blob): Promise<Uint8ClampedArray> {
   const bitmap = await createImageBitmap(photo);
   const canvas = document.createElement('canvas');
   canvas.width = SAMPLE_SIZE;
   canvas.height = SAMPLE_SIZE;
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Canvas is niet beschikbaar');
-
+  // Niet vervagen bij het verkleinen: dan houden dunne strepen hun echte kleuren.
+  context.imageSmoothingEnabled = false;
   const margin = (1 - CENTER_PART) / 2;
   context.drawImage(
     bitmap,
@@ -94,6 +131,19 @@ export async function detectColor(photo: Blob): Promise<ColorOption> {
     SAMPLE_SIZE,
   );
   bitmap.close();
-  const { data } = context.getImageData(0, 0, SAMPLE_SIZE, SAMPLE_SIZE);
-  return nearestColor(pickDominant(data));
+  return context.getImageData(0, 0, SAMPLE_SIZE, SAMPLE_SIZE).data;
+}
+
+/** Herkent de hoofdkleur en, als die er duidelijk is, een tweede kleur (bijv. bij strepen). */
+export async function detectColors(photo: Blob): Promise<{ primary: ColorOption; secondary?: ColorOption }> {
+  const pixels = await centerPixels(photo);
+  const primary = nearestColor(pickDominant(pixels));
+  // De tweede kleur: de grootste kleur die níét de hoofdkleur is (met dezelfde telling, zodat ze niet botsen).
+  const second = rankColorIds(pixels).find(([id, share]) => id !== primary.id && share >= SECOND_COLOR_SHARE);
+  return { primary, secondary: second ? colorInfo(second[0]) : undefined };
+}
+
+/** Herkent de hoofdkleur van een foto en geeft de dichtstbijzijnde kleur uit de lijst. */
+export async function detectColor(photo: Blob): Promise<ColorOption> {
+  return nearestColor(pickDominant(await centerPixels(photo)));
 }
