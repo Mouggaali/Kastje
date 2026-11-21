@@ -5,9 +5,11 @@ import { resizeImage } from '../data/resizeImage';
 import { newId } from '../data/storage';
 import { COLORS, colorInfo } from '../outfit/colors';
 import {
+  ACCESSORY_TYPES,
   CATEGORIES,
   OCCASIONS,
   WARMTH_LABELS,
+  type AccessoryType,
   type Category,
   type ClothingItem,
   type Occasion,
@@ -47,6 +49,7 @@ export function ItemForm(props: Props) {
     props;
   const [name, setName] = useState(item?.name ?? '');
   const [category, setCategory] = useState<Category>(item?.category ?? 'shirt');
+  const [accessoryType, setAccessoryType] = useState<AccessoryType>(item?.accessoryType ?? 'anders');
   const [occasions, setOccasions] = useState<Occasion[]>(item?.occasions ?? ['casual']);
   const [price, setPrice] = useState(item?.price !== undefined ? String(item.price) : '');
   const [color, setColor] = useState(item?.color ?? initialColor ?? 'zwart');
@@ -115,6 +118,7 @@ export function ItemForm(props: Props) {
           id: item?.id ?? newId(),
           name: name.trim(),
           category,
+          accessoryType: category === 'accessoire' ? accessoryType : undefined,
           occasions,
           price: parsedPrice,
           createdAt: item?.createdAt ?? Date.now(),
@@ -193,6 +197,21 @@ export function ItemForm(props: Props) {
             ))}
           </select>
         </label>
+
+        {category === 'accessoire' && (
+          <label className="field">
+            <span>Soort accessoire</span>
+            <select value={accessoryType} onChange={(e) => setAccessoryType(e.target.value as AccessoryType)}>
+              {ACCESSORY_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                  {t.hint ? ` (${t.hint})` : ''}
+                </option>
+              ))}
+            </select>
+            <small className="hint">Kastje stelt sjaal, muts, zonnebril, pet en paraplu vanzelf voor bij het juiste weer.</small>
+          </label>
+        )}
 
         <fieldset className="field">
           <legend>Kleur: {colorInfo(color).label.toLowerCase()}</legend>

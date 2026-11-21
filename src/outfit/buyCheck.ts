@@ -8,7 +8,7 @@ import { colorDistance, hexToRgb } from '../data/detectColor';
 import type { Category, ClothingItem, Warmth } from '../types';
 import { colorInfo } from './colors';
 import { harmonyScore } from './harmony';
-import { SLOT_CATEGORIES, slotOf, type OutfitPieces, type Slot } from './outfitLogic';
+import { outfitItems, SLOT_CATEGORIES, slotOf, type OutfitPieces, type Slot } from './outfitLogic';
 
 /** Kleuren die dichter bij elkaar liggen dan dit tellen als "vrijwel dezelfde". */
 const SIMILAR_COLOR_DISTANCE = 120;
@@ -74,7 +74,7 @@ export function buyCheck(candidate: BuyCandidate, items: ClothingItem[]): BuyChe
           const pieces: OutfitPieces = { top, bottom, shoes };
           // Een jas combineert met elke goede basis; die tellen we als jas + basis.
           if (ownSlot === 'jacket') pieces.jacket = newItem;
-          const score = harmonyScore(Object.values(pieces)).score;
+          const score = harmonyScore(outfitItems(pieces)).score;
           if (score >= GOOD_HARMONY) scored.push({ pieces, score });
         }
   }

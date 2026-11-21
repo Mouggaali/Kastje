@@ -3,7 +3,8 @@ import {
   outfitFromPieces,
   outfitItems,
   resolveSavedOutfit,
-  SLOTS,
+  piecesToIds,
+  sameOutfit,
   suggestOutfit,
   type Outfit,
 } from '../outfit/outfitLogic';
@@ -17,6 +18,7 @@ import {
   type WearLogEntry,
 } from '../types';
 import type { WeatherState } from '../weather/useWeather';
+import { weatherTips } from '../weather/tips';
 import { LocationPicker } from './LocationPicker';
 import { OutfitBuilder } from './OutfitBuilder';
 import { OutfitCard } from './OutfitCard';
@@ -44,12 +46,6 @@ interface Props {
 
 const DAY_LABELS = ['Vandaag', 'Morgen'];
 
-/** Outfit → de ids per onderdeel, zoals een bewaarde outfit ze opslaat. */
-function slotIds(outfit: Outfit | undefined): Partial<SavedOutfit> {
-  const ids: Partial<SavedOutfit> = {};
-  for (const slot of SLOTS) if (outfit?.[slot]) ids[slot] = outfit[slot]!.id;
-  return ids;
-}
 
 export function TodayView(props: Props) {
   const { items, wearLog, savedOutfits, votes, plan, weather, occasion, onOccasionChange } = props;
@@ -66,6 +62,8 @@ export function TodayView(props: Props) {
   const [voted, setVoted] = useState<(1 | -1 | undefined)[]>([]);
   const [noAlternative, setNoAlternative] = useState(false);
   const [keeping, setKeeping] = useState(false);
+  // Het huidige uur, zodat tips voor vandaag niet over uren gaan die al voorbij zijn.
+  const [nowHour] = useState(() => new Date().getHours());
 
   const plannedFor = (index: number) => days && plan.find((p) => p.date === days[index].date);
 
@@ -87,7 +85,7 @@ export function TodayView(props: Props) {
   function plannedOutfit(index: number): Outfit | null {
     const planned = plannedFor(index);
     if (!planned || anchor) return null;
-    const pieces = resolveSavedOutfit({ id: '', name: '', createdAt: 0, ...planned }, items);
+    const pieces = resolveSavedOutfit(planned, items);
     return outfitItems(pieces).length > 0 ? outfitFromPieces(pieces, days![index]) : null;
   }
 
@@ -162,8 +160,8 @@ export function TodayView(props: Props) {
   const loggedToday = wearLog.find((entry) => entry.date === todayDate);
   const todayIds = outfitItems(outfits[0]).map((i) => i.id);
   const wornToday = !!loggedToday && loggedToday.itemIds.join() === todayIds.join();
-  const currentIds = slotIds(outfit);
-  const alreadySaved = savedOutfits.some((saved) => SLOTS.every((slot) => saved[slot] === currentIds[slot]));
+  const currentIds = piecesToIds(outfit);
+  const alreadySaved = savedOutfits.some((saved) => sameOutfit(saved, currentIds));
   const showPicker = pickerOpen || weather.status === 'needs-place';
 
   return (
@@ -261,6 +259,7 @@ export function TodayView(props: Props) {
           voted={voted[day]}
           onPin={(item) => onAnchorChange(item.id === anchor?.id ? null : item)}
           pinnedId={anchor?.id}
+          tips={days ? weatherTips(days[day], day === 0 ? nowHour : 0) : []}
           onOpenWardrobe={onOpenWardrobe}
         />
       )}

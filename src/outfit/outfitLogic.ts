@@ -12,6 +12,7 @@
  */
 import {
   OCCASIONS,
+  type AccessoryType,
   type Category,
   type ClothingItem,
   type DayWeather,
@@ -63,11 +64,7 @@ const PENALTY = {
 
 export type Slot = 'top' | 'bottom' | 'shoes' | 'jacket';
 
-export interface Outfit {
-  top?: ClothingItem;
-  bottom?: ClothingItem;
-  shoes?: ClothingItem;
-  jacket?: ClothingItem;
+export interface Outfit extends OutfitPieces {
   needsJacket: boolean;
   /** Onderdelen waarvoor niets in de kast lag, bijv. ["jas"] */
   missing: string[];
@@ -93,8 +90,15 @@ export interface SuggestOptions {
   random?: () => number;
 }
 
-/** De losse stukken van een outfit, per onderdeel. */
-export type OutfitPieces = Partial<Record<Slot, ClothingItem>>;
+/** De losse stukken van een outfit: de vier vaste onderdelen, eventueel een laag en accessoires. */
+export type OutfitPieces = Partial<Record<Slot, ClothingItem>> & {
+  /** Shirt onder de trui */
+  layer?: ClothingItem;
+  accessories?: ClothingItem[];
+};
+
+/** Dezelfde outfit, maar met alleen ids (zoals bewaarde en geplande outfits ze opslaan). */
+export type OutfitIds = Partial<Record<Slot | 'layer', string>> & { accessories?: string[] };
 
 export const SLOTS: Slot[] = ['top', 'bottom', 'shoes', 'jacket'];
 
@@ -227,19 +231,47 @@ function pickForSlot(
   return ranked.find((item) => !colorsClash([...colors, item.color])) ?? ranked[0];
 }
 
-/** De stukken van een outfit in vaste volgorde: boven, onder, schoenen, jas. */
-export function outfitItems(outfit: OutfitPieces | null | undefined): ClothingItem[] {
+/** De hoofdstukken (zonder accessoires) in vaste volgorde: boven, laag, onder, schoenen, jas. */
+export function mainItems(outfit: OutfitPieces | null | undefined): ClothingItem[] {
   if (!outfit) return [];
-  return SLOTS.map((slot) => outfit[slot]).filter((item): item is ClothingItem => item !== undefined);
+  return [outfit.top, outfit.layer, outfit.bottom, outfit.shoes, outfit.jacket].filter(
+    (item): item is ClothingItem => item !== undefined,
+  );
 }
 
-/** Bewaarde outfit (met ids) → de echte kledingstukken. Verwijderde stukken vallen weg. */
-export function resolveSavedOutfit(saved: SavedOutfit, items: ClothingItem[]): OutfitPieces {
+/** Alle stukken van een outfit, inclusief accessoires. */
+export function outfitItems(outfit: OutfitPieces | null | undefined): ClothingItem[] {
+  if (!outfit) return [];
+  return [...mainItems(outfit), ...(outfit.accessories ?? [])];
+}
+
+/** Stukken → ids, om te bewaren of te vergelijken. */
+export function piecesToIds(pieces: OutfitPieces | null | undefined): OutfitIds {
+  const ids: OutfitIds = {};
+  if (!pieces) return ids;
+  for (const slot of [...SLOTS, 'layer'] as const) if (pieces[slot]) ids[slot] = pieces[slot]!.id;
+  if (pieces.accessories?.length) ids.accessories = pieces.accessories.map((i) => i.id);
+  return ids;
+}
+
+/** Zijn twee outfits (als ids) precies hetzelfde? De volgorde van accessoires telt niet. */
+export function sameOutfit(a: OutfitIds, b: OutfitIds): boolean {
+  const sameSlots = ([...SLOTS, 'layer'] as const).every((slot) => a[slot] === b[slot]);
+  const accA = [...(a.accessories ?? [])].sort().join();
+  const accB = [...(b.accessories ?? [])].sort().join();
+  return sameSlots && accA === accB;
+}
+
+/** Bewaarde of geplande outfit (met ids) → de echte kledingstukken. Verwijderde stukken vallen weg. */
+export function resolveSavedOutfit(saved: OutfitIds, items: ClothingItem[]): OutfitPieces {
+  const find = (id?: string) => (id ? items.find((i) => i.id === id) : undefined);
   const pieces: OutfitPieces = {};
-  for (const slot of SLOTS) {
-    const item = items.find((i) => i.id === saved[slot]);
+  for (const slot of [...SLOTS, 'layer'] as const) {
+    const item = find(saved[slot]);
     if (item) pieces[slot] = item;
   }
+  const accessories = (saved.accessories ?? []).map(find).filter((i): i is ClothingItem => i !== undefined);
+  if (accessories.length > 0) pieces.accessories = accessories;
   return pieces;
 }
 
@@ -256,7 +288,47 @@ export function outfitFromPieces(pieces: OutfitPieces, weather: DayWeather): Out
 
 /** Hoeveel stukken van een bewaarde outfit niet meer in de kast zitten. */
 export function missingFromSaved(saved: SavedOutfit, items: ClothingItem[]): number {
-  return SLOTS.filter((slot) => saved[slot] && !items.some((i) => i.id === saved[slot])).length;
+  const ids = [...([...SLOTS, 'layer'] as const).map((slot) => saved[slot]), ...(saved.accessories ?? [])];
+  return ids.filter((id) => id && !items.some((i) => i.id === id)).length;
+}
+
+// ---------- Laagjes en accessoires ----------
+
+/** Onder deze gevoelstemperatuur gaat er een shirt onder de trui. */
+export const LAYER_BELOW = 8;
+/** Bij zoveel graden verschil tussen ochtend en middag: laagjes die je uit kunt doen. */
+export const LAYER_SWING = 8;
+
+/** Welke accessoires het weer vraagt, met de reden erbij. */
+export function wantedAccessories(weather: DayWeather, jacket?: ClothingItem): { type: AccessoryType; reason: string }[] {
+  const wanted: { type: AccessoryType; reason: string }[] = [];
+  const sunny = weather.weatherCode <= 1;
+  if (weather.feelsLike < 5) {
+    wanted.push({ type: 'sjaal', reason: 'tegen de kou' }, { type: 'muts', reason: 'tegen de kou' });
+  }
+  if (weather.feelsLike < 2) wanted.push({ type: 'handschoenen', reason: 'tegen de kou' });
+  if (sunny && weather.feelsLike > 15) wanted.push({ type: 'zonnebril', reason: 'tegen de zon' });
+  if (sunny && weather.feelsLike > 22) wanted.push({ type: 'pet', reason: 'tegen de zon' });
+  if (weatherConditions(weather).rainy && !jacket?.waterproof) wanted.push({ type: 'paraplu', reason: 'voor de regen' });
+  return wanted;
+}
+
+/** Kiest per gewenst type het accessoire dat qua kleur het best bij de outfit past. */
+function pickAccessories(
+  items: ClothingItem[],
+  wanted: { type: AccessoryType }[],
+  outfit: ClothingItem[],
+  random: () => number,
+): ClothingItem[] {
+  const picked: ClothingItem[] = [];
+  for (const { type } of wanted) {
+    const best = items
+      .filter((i) => i.category === 'accessoire' && i.accessoryType === type)
+      .map((item) => ({ item, points: -harmonyScore([...outfit, ...picked, item]).score + random() * 3 }))
+      .sort((a, b) => a.points - b.points)[0];
+    if (best) picked.push(best.item);
+  }
+  return picked;
 }
 
 /** Stelt een complete outfit samen voor het opgegeven weer. */
@@ -289,6 +361,19 @@ export function suggestOutfit(options: SuggestOptions): Outfit {
     if (item) chosen[slot] = item;
     else missing.push(SLOT_NAMES[slot]);
   }
+
+  // Laag: een licht shirt onder de trui als het koud is, of als het tussen ochtend en middag flink scheelt.
+  const swing = weather.feelsLikeMax - weather.feelsLikeMin;
+  if (chosen.top?.category === 'trui' && (weather.feelsLike < LAYER_BELOW || swing >= LAYER_SWING)) {
+    const shirts = items.filter((i) => i.category === 'shirt');
+    const layer = pickForSlot(shirts, 'top', { ...ctx, target: 2 }, outfitItems(chosen));
+    if (layer) chosen.layer = layer;
+  }
+
+  // Accessoires die het weer vraagt (sjaal, muts, zonnebril, paraplu, …), als je ze hebt.
+  const wanted = wantedAccessories(weather, chosen.jacket);
+  const accessories = pickAccessories(items, wanted, outfitItems(chosen), random);
+  if (accessories.length > 0) chosen.accessories = accessories;
 
   let explanation = explain(weather, chosen);
   if (anchor && anchorSlot) explanation += ` Rond je ${anchor.name.toLowerCase()} gebouwd.`;
@@ -347,7 +432,16 @@ function joinDutch(parts: string[]): string {
   return `${parts.slice(0, -1).join(', ')} en ${parts[parts.length - 1]}`;
 }
 
-export function explain(weather: DayWeather, chosen: Partial<Record<Slot, ClothingItem>>): string {
+const ACCESSORY_NOUNS: Partial<Record<AccessoryType, string>> = {
+  sjaal: 'een sjaal',
+  muts: 'een muts',
+  handschoenen: 'handschoenen',
+  pet: 'een pet',
+  zonnebril: 'een zonnebril',
+  paraplu: 'een paraplu',
+};
+
+export function explain(weather: DayWeather, chosen: OutfitPieces): string {
   const { rainy, windy } = weatherConditions(weather);
 
   const circumstances: string[] = [];
@@ -359,7 +453,10 @@ export function explain(weather: DayWeather, chosen: Partial<Record<Slot, Clothi
       : `Het is ${weather.feelsLike} °C en droog`;
 
   const reasons: string[] = [];
-  if (chosen.top) reasons.push(describeItem(chosen.top, [WARMTH_ADJECTIVES[chosen.top.warmth]]));
+  if (chosen.top) {
+    const top = describeItem(chosen.top, [WARMTH_ADJECTIVES[chosen.top.warmth]]);
+    reasons.push(chosen.layer ? `${top} met een shirt eronder` : top);
+  }
   if (chosen.jacket) {
     const adjective = rainy && chosen.jacket.waterproof ? 'waterdicht' : WARMTH_ADJECTIVES[chosen.jacket.warmth];
     reasons.push(describeItem(chosen.jacket, [adjective]));
@@ -367,7 +464,17 @@ export function explain(weather: DayWeather, chosen: Partial<Record<Slot, Clothi
   if (rainy && chosen.shoes?.waterproof) reasons.push(describeItem(chosen.shoes, ['waterdicht']));
 
   let text = reasons.length > 0 ? `${weatherText}, daarom ${joinDutch(reasons)}.` : `${weatherText}.`;
-  if (rainy && chosen.jacket && !chosen.jacket.waterproof) text += ' Let op: je jas is niet waterdicht.';
-  if (rainy && !chosen.jacket) text += ' Neem een paraplu mee.';
+
+  // Accessoires, gegroepeerd per reden: "Pak ook een sjaal en een muts tegen de kou."
+  const byReason = new Map<string, string[]>();
+  for (const { type, reason } of wantedAccessories(weather, chosen.jacket)) {
+    if (!chosen.accessories?.some((a) => a.accessoryType === type)) continue;
+    byReason.set(reason, [...(byReason.get(reason) ?? []), ACCESSORY_NOUNS[type] ?? type]);
+  }
+  for (const [reason, nouns] of byReason) text += ` Pak ook ${joinDutch(nouns)} ${reason}.`;
+
+  const hasUmbrella = chosen.accessories?.some((a) => a.accessoryType === 'paraplu');
+  if (rainy && chosen.jacket && !chosen.jacket.waterproof && !hasUmbrella) text += ' Let op: je jas is niet waterdicht.';
+  if (rainy && !chosen.jacket && !hasUmbrella) text += ' Neem een paraplu mee.';
   return text;
 }

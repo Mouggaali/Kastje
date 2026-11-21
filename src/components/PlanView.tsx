@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { outfitItems, resolveSavedOutfit, SLOTS, suggestOutfit } from '../outfit/outfitLogic';
+import { outfitItems, piecesToIds, resolveSavedOutfit, suggestOutfit } from '../outfit/outfitLogic';
 import type { ClothingItem, DayWeather, Occasion, OutfitVote, PlannedDay, SavedOutfit, WearLogEntry } from '../types';
 import { describeWeather } from '../weather/openMeteo';
+import { weatherTips } from '../weather/tips';
 import type { WeatherState } from '../weather/useWeather';
 import { OutfitBuilder } from './OutfitBuilder';
 import { OutfitCollage } from './OutfitCollage';
@@ -57,15 +58,11 @@ export function PlanView({ items, wearLog, votes, occasion, weather, plan, onPla
   function initialFor(day: DayWeather): Partial<SavedOutfit> {
     const planned = plan.find((p) => p.date === day.date);
     if (planned) return planned;
-    const suggestion = suggestOutfit({ items, weather: day, wearLog, date: day.date, occasion, votes });
-    const ids: Partial<SavedOutfit> = {};
-    for (const slot of SLOTS) if (suggestion[slot]) ids[slot] = suggestion[slot]!.id;
-    return ids;
+    return piecesToIds(suggestOutfit({ items, weather: day, wearLog, date: day.date, occasion, votes }));
   }
 
   function savePlanned(date: string, outfit: SavedOutfit) {
-    const entry: PlannedDay = { date };
-    for (const slot of SLOTS) if (outfit[slot]) entry[slot] = outfit[slot];
+    const entry: PlannedDay = { date, ...piecesToIds(resolveSavedOutfit(outfit, items)) };
     onPlanChange([...plan.filter((p) => p.date !== date), entry].sort((a, b) => a.date.localeCompare(b.date)));
     setEditing(null);
   }
@@ -80,7 +77,7 @@ export function PlanView({ items, wearLog, votes, occasion, weather, plan, onPla
       <ul className="plan-list">
         {weather.days.map((day, index) => {
           const planned = plan.find((p) => p.date === day.date);
-          const pieces = planned ? resolveSavedOutfit({ id: '', name: '', createdAt: 0, ...planned }, items) : {};
+          const pieces = planned ? resolveSavedOutfit(planned, items) : {};
           const hasPieces = outfitItems(pieces).length > 0;
           return (
             <li key={day.date} className="card plan-day">
@@ -88,6 +85,7 @@ export function PlanView({ items, wearLog, votes, occasion, weather, plan, onPla
                 <div>
                   <h2>{dayLabel(day.date, index)}</h2>
                   <span className="muted">{weatherLine(day)}</span>
+                  {weatherTips(day)[0] && <p className="plan-tip">{weatherTips(day)[0]}</p>}
                 </div>
                 <button
                   className={hasPieces ? 'button button--secondary button--small' : 'button button--small'}

@@ -204,7 +204,8 @@ input:not([type='radio'], [type='checkbox'], [type='file']), select {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
 }
 .collage--1 { grid-template-columns: minmax(0, 260px); }
-.collage--3 { grid-template-columns: repeat(3, 1fr); }
+.collage--3, .collage--5 { grid-template-columns: repeat(3, 1fr); }
+.collage--5 .collage-caption .item-meta { display: none; }
 .collage-tile {
   display: flex; flex-direction: column; gap: 6px; min-width: 0;
   padding: 6px 6px 8px; background: var(--surface-2); border-radius: var(--radius-small);
@@ -505,6 +506,30 @@ p.badge { margin: 0 0 8px; }
 .verdict--koop { background: var(--accent-soft); border-left-color: var(--accent); }
 .verdict--skip { background: var(--danger-soft); border-left-color: var(--danger); }
 .verdict--twijfel { border-left-color: #c99a2e; }
+
+/* ---------- Accessoires en tips ---------- */
+
+.accessory-row {
+  list-style: none; margin: -8px 0 16px; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.accessory-row li {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 10px 4px 4px; border-radius: 999px; background: var(--surface-2);
+  font-size: 13px; max-width: 100%;
+}
+.accessory-row .item-photo--small { width: 36px; font-size: 18px; border-radius: 50%; }
+.accessory-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.accessory-row--compact { margin: 6px 0 0; }
+.accessory-row--compact li { padding: 2px; }
+
+.tips { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tips li {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 8px 12px; border-radius: var(--radius-small);
+  background: var(--accent-soft); font-size: 14px;
+}
+.plan-tip { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }
 
 /* ---------- Zoeken ---------- */
 

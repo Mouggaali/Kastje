@@ -6,7 +6,9 @@ import {
   missingFromSaved,
   outfitItems,
   pairAffinity,
+  piecesToIds,
   resolveSavedOutfit,
+  sameOutfit,
   suggestOutfit,
   targetWarmth,
   wornRecently,
@@ -72,7 +74,8 @@ describe('suggestOutfit', () => {
     expect(outfit.shoes?.id).toBe('laarzen');
     expect(outfit.bottom?.id).toBe('jeans');
     expect(outfit.explanation).toBe(
-      'Het is 6 °C met 70% kans op regen, daarom een warme trui, een waterdichte jas en waterdichte schoenen.',
+      // Onder de 8 °C komt er een shirt onder de trui (zie "laagjes en accessoires").
+      'Het is 6 °C met 70% kans op regen, daarom een warme trui met een shirt eronder, een waterdichte jas en waterdichte schoenen.',
     );
   });
 
@@ -190,6 +193,78 @@ describe('gelegenheid, vastzetten en stemmen', () => {
   it('geeft elke suggestie een harmoniescore', () => {
     const outfit = suggestOutfit({ items: closet, weather: mild, wearLog: [], date: TODAY, random: noRandom });
     expect(outfit.harmony.score).toBe(90); // alles zwart = neutraal
+  });
+});
+
+describe('laagjes en accessoires', () => {
+  const closet: ClothingItem[] = [
+    item('wollen trui', 'trui', 4),
+    item('t-shirt', 'shirt', 1),
+    item('jeans', 'broek', 3),
+    item('boots', 'schoenen', 4, { waterproof: true }),
+    item('winterjas', 'jas', 5),
+    item('sjaal', 'accessoire', 3, { accessoryType: 'sjaal' }),
+    item('muts', 'accessoire', 3, { accessoryType: 'muts' }),
+    item('zonnebril', 'accessoire', 1, { accessoryType: 'zonnebril' }),
+    item('paraplu', 'accessoire', 1, { accessoryType: 'paraplu' }),
+    item('tas', 'accessoire', 1, { accessoryType: 'tas' }),
+  ];
+  const at = (feelsLike: number, extra: Partial<DayWeather> = {}) => ({ ...weather(feelsLike), ...extra });
+
+  it('zet bij kou een shirt onder de trui, en neemt sjaal en muts mee', () => {
+    const outfit = suggestOutfit({ items: closet, weather: at(2), wearLog: [], date: TODAY, random: noRandom });
+    expect(outfit.top?.id).toBe('wollen trui');
+    expect(outfit.layer?.id).toBe('t-shirt');
+    expect(outfit.accessories?.map((a) => a.id)).toEqual(['sjaal', 'muts']);
+    expect(outfit.explanation).toContain('een warme trui met een shirt eronder');
+    expect(outfit.explanation).toContain('Pak ook een sjaal en een muts tegen de kou.');
+  });
+
+  it('kiest laagjes als het tussen ochtend en middag flink scheelt', () => {
+    const outfit = suggestOutfit({
+      items: closet,
+      weather: at(10, { feelsLikeMin: 4, feelsLikeMax: 14 }),
+      wearLog: [],
+      date: TODAY,
+      random: noRandom,
+    });
+    expect(outfit.layer?.id).toBe('t-shirt');
+  });
+
+  it('geen laag en geen sjaal bij zacht weer', () => {
+    const outfit = suggestOutfit({ items: closet, weather: at(12), wearLog: [], date: TODAY, random: noRandom });
+    expect(outfit.layer).toBeUndefined();
+    expect(outfit.accessories).toBeUndefined();
+  });
+
+  it('zonnebril bij zon en warmte, nooit tas of "anders" vanzelf', () => {
+    const outfit = suggestOutfit({
+      items: closet,
+      weather: at(20, { weatherCode: 0 }),
+      wearLog: [],
+      date: TODAY,
+      random: noRandom,
+    });
+    expect(outfit.accessories?.map((a) => a.id)).toEqual(['zonnebril']);
+    expect(outfit.explanation).toContain('Pak ook een zonnebril tegen de zon.');
+  });
+
+  it('paraplu bij regen als de jas niet waterdicht is', () => {
+    const outfit = suggestOutfit({ items: closet, weather: at(12, { rainChance: 80 }), wearLog: [], date: TODAY, random: noRandom });
+    expect(outfit.accessories?.map((a) => a.id)).toEqual(['paraplu']);
+    expect(outfit.explanation).toContain('Pak ook een paraplu voor de regen.');
+    expect(outfit.explanation).not.toContain('niet waterdicht');
+  });
+
+  it('accessoires en laag tellen mee bij bewaren en terughalen', () => {
+    const outfit = suggestOutfit({ items: closet, weather: at(2), wearLog: [], date: TODAY, random: noRandom });
+    const ids = piecesToIds(outfit);
+    expect(ids.layer).toBe('t-shirt');
+    expect(ids.accessories).toEqual(['sjaal', 'muts']);
+    const back = resolveSavedOutfit(ids, closet);
+    expect(sameOutfit(piecesToIds(back), ids)).toBe(true);
+    expect(sameOutfit(ids, { ...ids, accessories: ['muts', 'sjaal'] })).toBe(true); // volgorde telt niet
+    expect(sameOutfit(ids, { ...ids, layer: undefined })).toBe(false);
   });
 });
 

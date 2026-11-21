@@ -24,12 +24,14 @@ interface Props {
   /** Tik op een foto om dat stuk vast te zetten */
   onPin: (item: ClothingItem) => void;
   pinnedId?: string;
+  /** Tips op basis van het weer per uur */
+  tips: string[];
   onOpenWardrobe: () => void;
 }
 
 export function OutfitCard(props: Props) {
   const { title, outfit, planned, onAnother, onWear, worn, noAlternative, onKeep, saved } = props;
-  const { onVote, voted, onPin, pinnedId, onOpenWardrobe } = props;
+  const { onVote, voted, onPin, pinnedId, tips, onOpenWardrobe } = props;
   const hasPieces = outfitItems(outfit).length > 0;
 
   return (
@@ -45,6 +47,13 @@ export function OutfitCard(props: Props) {
 
       {planned && <p className="badge badge--planned">📅 Dit had je gepland</p>}
       <p className="explanation">{outfit.explanation}</p>
+      {tips.length > 0 && (
+        <ul className="tips" aria-label="Tips voor vandaag">
+          {tips.map((tip) => (
+            <li key={tip}>{tip}</li>
+          ))}
+        </ul>
+      )}
       {hasPieces && <HarmonyBadge harmony={outfit.harmony} />}
 
       <OutfitCollage pieces={outfit} onTileClick={onPin} pinnedId={pinnedId} />

@@ -36,10 +36,38 @@ export const OCCASIONS: { value: Occasion; label: string }[] = [
   { value: 'feest', label: 'Feest' },
 ];
 
+/** Soort accessoire; bepaalt bij welk weer Kastje het voorstelt. */
+export type AccessoryType =
+  | 'sjaal'
+  | 'muts'
+  | 'handschoenen'
+  | 'pet'
+  | 'zonnebril'
+  | 'paraplu'
+  | 'tas'
+  | 'riem'
+  | 'sieraad'
+  | 'anders';
+
+export const ACCESSORY_TYPES: { value: AccessoryType; label: string; hint?: string }[] = [
+  { value: 'sjaal', label: 'Sjaal', hint: 'bij kou' },
+  { value: 'muts', label: 'Muts', hint: 'bij kou' },
+  { value: 'handschoenen', label: 'Handschoenen', hint: 'bij vorst' },
+  { value: 'pet', label: 'Pet', hint: 'bij zon en warmte' },
+  { value: 'zonnebril', label: 'Zonnebril', hint: 'bij zon' },
+  { value: 'paraplu', label: 'Paraplu', hint: 'bij regen' },
+  { value: 'tas', label: 'Tas' },
+  { value: 'riem', label: 'Riem' },
+  { value: 'sieraad', label: 'Sieraad' },
+  { value: 'anders', label: 'Anders' },
+];
+
 export interface ClothingItem {
   id: string;
   name: string;
   category: Category;
+  /** Alleen bij categorie "accessoire" */
+  accessoryType?: AccessoryType;
   /** Voor welke gelegenheden je dit draagt */
   occasions: Occasion[];
   /** Aankoopprijs in euro's (optioneel), voor "prijs per keer dragen" */
@@ -79,6 +107,9 @@ export interface PlannedDay {
   bottom?: string;
   shoes?: string;
   jacket?: string;
+  /** Shirt onder de trui */
+  layer?: string;
+  accessories?: string[];
 }
 
 /** Een outfit die je zelf hebt samengesteld of bewaard. De velden bevatten item-ids. */
@@ -89,6 +120,9 @@ export interface SavedOutfit {
   bottom?: string;
   shoes?: string;
   jacket?: string;
+  /** Shirt onder de trui */
+  layer?: string;
+  accessories?: string[];
   createdAt: number;
 }
 
@@ -111,4 +145,13 @@ export interface DayWeather {
   windSpeed: number;
   /** WMO-weercode van Open-Meteo */
   weatherCode: number;
+  /** Het weer per uur overdag, voor tips als "regen vanaf 15:00" (kan ontbreken bij oude gegevens) */
+  hours?: HourWeather[];
+}
+
+export interface HourWeather {
+  hour: number;
+  feelsLike: number;
+  rainChance: number;
+  windSpeed: number;
 }

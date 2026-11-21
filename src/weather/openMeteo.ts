@@ -54,6 +54,12 @@ export function summarizeDays(hourly: HourlyData): DayWeather[] {
       rainChance: Math.max(...indexes.map((i) => hourly.precipitation_probability[i] ?? 0)),
       windSpeed: Math.round(Math.max(...indexes.map((i) => hourly.wind_speed_10m[i]))),
       weatherCode: Math.max(...indexes.map((i) => hourly.weather_code[i])),
+      hours: indexes.map((i) => ({
+        hour: Number(hourly.time[i].slice(11, 13)),
+        feelsLike: Math.round(hourly.apparent_temperature[i]),
+        rainChance: hourly.precipitation_probability[i] ?? 0,
+        windSpeed: Math.round(hourly.wind_speed_10m[i]),
+      })),
     };
   });
 }

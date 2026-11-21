@@ -3,13 +3,13 @@ import { newId } from '../data/storage';
 import { harmonyScore } from '../outfit/harmony';
 import {
   outfitItems,
+  piecesToIds,
   resolveSavedOutfit,
   SLOT_CATEGORIES,
-  SLOT_NAMES,
-  SLOTS,
+  type OutfitIds,
   type Slot,
 } from '../outfit/outfitLogic';
-import type { ClothingItem, SavedOutfit } from '../types';
+import type { Category, ClothingItem, SavedOutfit } from '../types';
 import { HarmonyBadge } from './HarmonyBadge';
 import { ItemPhoto } from './ItemPhoto';
 import { OutfitCollage } from './OutfitCollage';
@@ -31,22 +31,23 @@ interface Props {
   onCancel: () => void;
 }
 
-const SLOT_TITLES: Record<Slot, string> = {
-  top: 'Bovenstuk',
-  bottom: 'Onderstuk',
-  shoes: 'Schoenen',
-  jacket: 'Jas (optioneel)',
-};
+type SectionKey = Slot | 'layer' | 'accessories';
+
+/** De rijen met foto's in de bouwer, van boven naar beneden. */
+const SECTIONS: { key: SectionKey; title: string; empty: string; categories: Category[] }[] = [
+  { key: 'top', title: 'Bovenstuk', empty: 'bovenstuk', categories: SLOT_CATEGORIES.top },
+  { key: 'layer', title: 'Laag eronder (optioneel)', empty: 'shirt', categories: ['shirt'] },
+  { key: 'bottom', title: 'Onderstuk', empty: 'onderstuk', categories: SLOT_CATEGORIES.bottom },
+  { key: 'shoes', title: 'Schoenen', empty: 'schoenen', categories: SLOT_CATEGORIES.shoes },
+  { key: 'jacket', title: 'Jas (optioneel)', empty: 'jas', categories: SLOT_CATEGORIES.jacket },
+  { key: 'accessories', title: 'Accessoires (optioneel, meerdere)', empty: 'accessoires', categories: ['accessoire'] },
+];
 
 /** Zelf een outfit samenstellen door per onderdeel op een foto te tikken. */
 export function OutfitBuilder(props: Props) {
   const { items, initial, defaultName, title, subtitle, hideName, onClear, onSave, onCancel } = props;
   const [name, setName] = useState(initial?.name ?? '');
-  const [chosen, setChosen] = useState<Partial<Record<Slot, string>>>(() => {
-    const start: Partial<Record<Slot, string>> = {};
-    for (const slot of SLOTS) if (initial?.[slot]) start[slot] = initial[slot];
-    return start;
-  });
+  const [chosen, setChosen] = useState<OutfitIds>(() => piecesToIds(resolveSavedOutfit(initial ?? {}, items)));
 
   // Id en datum één keer vastleggen, niet bij elke render opnieuw.
   const [id] = useState(() => initial?.id ?? newId());
@@ -55,10 +56,23 @@ export function OutfitBuilder(props: Props) {
   const pieces = resolveSavedOutfit(draft, items);
   const isEmpty = Object.keys(pieces).length === 0;
 
-  /** Tik op een foto om hem te kiezen; nog eens tikken haalt hem weg. */
-  function toggle(slot: Slot, itemId: string) {
-    setChosen((current) => ({ ...current, [slot]: current[slot] === itemId ? undefined : itemId }));
+  /** Tik op een foto om hem te kiezen; nog eens tikken haalt hem weg. Accessoires: meerdere tegelijk. */
+  function toggle(key: SectionKey, itemId: string) {
+    setChosen((current) => {
+      if (key === 'accessories') {
+        const list = current.accessories ?? [];
+        const next = list.includes(itemId) ? list.filter((x) => x !== itemId) : [...list, itemId];
+        return { ...current, accessories: next.length > 0 ? next : undefined };
+      }
+      return { ...current, [key]: current[key] === itemId ? undefined : itemId };
+    });
   }
+
+  const isChosen = (key: SectionKey, itemId: string) =>
+    key === 'accessories' ? (chosen.accessories ?? []).includes(itemId) : chosen[key] === itemId;
+  // De laag-rij alleen tonen als je een trui hebt gekozen (of al een laag had).
+  const topIsSweater = items.find((i) => i.id === chosen.top)?.category === 'trui';
+  const sections = SECTIONS.filter((s) => s.key !== 'layer' || topIsSweater || chosen.layer);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -82,22 +96,22 @@ export function OutfitBuilder(props: Props) {
           )}
         </div>
 
-        {SLOTS.map((slot) => {
-          const candidates = items.filter((item) => SLOT_CATEGORIES[slot].includes(item.category));
+        {sections.map(({ key, title, empty, categories }) => {
+          const candidates = items.filter((item) => categories.includes(item.category));
           return (
-            <section key={slot} className="field">
-              <span>{SLOT_TITLES[slot]}</span>
+            <section key={key} className="field">
+              <span>{title}</span>
               {candidates.length === 0 ? (
-                <small className="hint">Nog geen {SLOT_NAMES[slot]} in je kast.</small>
+                <small className="hint">Nog geen {empty} in je kast.</small>
               ) : (
                 <div className="photo-strip">
                   {candidates.map((item) => (
                     <button
                       type="button"
                       key={item.id}
-                      className={chosen[slot] === item.id ? 'strip-item strip-item--chosen' : 'strip-item'}
-                      onClick={() => toggle(slot, item.id)}
-                      aria-pressed={chosen[slot] === item.id}
+                      className={isChosen(key, item.id) ? 'strip-item strip-item--chosen' : 'strip-item'}
+                      onClick={() => toggle(key, item.id)}
+                      aria-pressed={isChosen(key, item.id)}
                     >
                       <ItemPhoto item={item} />
                       <span className="strip-name">{item.name}</span>
