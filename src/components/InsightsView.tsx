@@ -1,6 +1,7 @@
 import { addDays, toDateString } from '../outfit/outfitLogic';
 import { colorBreakdown, costPerWear, mostWorn, sleepers, SLEEPER_DAYS, wearStats } from '../outfit/stats';
 import type { ClothingItem, WearLogEntry } from '../types';
+import { BackupCard } from './BackupCard';
 import { ItemPhoto } from './ItemPhoto';
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
   wearLog: WearLogEntry[];
   onItemsChange: (items: ClothingItem[]) => void;
   onBuildAround: (item: ClothingItem) => void;
+  lastBackup: number | null;
+  onBackupMade: (time: number) => void;
 }
 
 const euro = (value: number) =>
@@ -20,7 +23,7 @@ function daysAgo(date: string, today: string): string {
 }
 
 /** Inzicht in je kast: wat draag je echt, wat slaapt, en wat kun je opruimen. */
-export function InsightsView({ items, wearLog, onItemsChange, onBuildAround }: Props) {
+export function InsightsView({ items, wearLog, onItemsChange, onBuildAround, lastBackup, onBackupMade }: Props) {
   const today = toDateString(new Date());
   const active = items.filter((i) => !i.archived);
   const archived = items.filter((i) => i.archived);
@@ -177,6 +180,7 @@ export function InsightsView({ items, wearLog, onItemsChange, onBuildAround }: P
           </ul>
         </article>
       )}
+      <BackupCard lastBackup={lastBackup} onBackupMade={onBackupMade} />
     </section>
   );
 }

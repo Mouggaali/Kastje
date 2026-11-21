@@ -42,3 +42,15 @@ export function getPhoto(id: string): Promise<Blob | undefined> {
 export async function deletePhoto(id: string): Promise<void> {
   await run('readwrite', (store) => store.delete(id));
 }
+
+/** Alle foto's als [id, foto]-paren (voor een back-up). */
+export async function getAllPhotos(): Promise<[string, Blob][]> {
+  const keys = await run('readonly', (store) => store.getAllKeys());
+  const blobs = await run('readonly', (store) => store.getAll() as IDBRequest<Blob[]>);
+  return keys.map((key, i) => [String(key), blobs[i]]);
+}
+
+/** Alle foto's wissen (voor het terugzetten van een back-up). */
+export async function clearPhotos(): Promise<void> {
+  await run('readwrite', (store) => store.clear());
+}

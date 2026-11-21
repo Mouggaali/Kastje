@@ -20,6 +20,7 @@ const KEYS = {
   plan: 'kastje.plan',
   occasion: 'kastje.occasion',
   weatherCache: 'kastje.weatherCache',
+  lastBackup: 'kastje.lastBackup',
 };
 
 function read<T>(key: string, fallback: T): T {
@@ -108,6 +109,15 @@ export function loadOccasion(): Occasion | null {
 
 export function saveOccasion(occasion: Occasion | null): void {
   write(KEYS.occasion, occasion);
+}
+
+/** Wanneer je voor het laatst een back-up maakte (ms), of null. */
+export function loadLastBackup(): number | null {
+  return read<number | null>(KEYS.lastBackup, null);
+}
+
+export function saveLastBackup(time: number): void {
+  write(KEYS.lastBackup, time);
 }
 
 /** Laatst opgehaalde weersverwachting, zodat de app ook zonder internet iets laat zien. */

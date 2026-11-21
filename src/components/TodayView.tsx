@@ -37,6 +37,9 @@ interface Props {
   onSaveOutfit: (outfit: SavedOutfit) => void;
   onVote: (vote: OutfitVote) => void;
   onOpenWardrobe: () => void;
+  /** Tijd voor een nieuwe back-up? */
+  backupDue: boolean;
+  onOpenInsights: () => void;
 }
 
 const DAY_LABELS = ['Vandaag', 'Morgen'];
@@ -50,7 +53,7 @@ function slotIds(outfit: Outfit | undefined): Partial<SavedOutfit> {
 
 export function TodayView(props: Props) {
   const { items, wearLog, savedOutfits, votes, plan, weather, occasion, onOccasionChange } = props;
-  const { anchor, onAnchorChange, onLogWear, onSaveOutfit, onVote, onOpenWardrobe } = props;
+  const { anchor, onAnchorChange, onLogWear, onSaveOutfit, onVote, onOpenWardrobe, backupDue, onOpenInsights } = props;
   const days = weather.days?.slice(0, 2) ?? null;
 
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -260,6 +263,15 @@ export function TodayView(props: Props) {
           pinnedId={anchor?.id}
           onOpenWardrobe={onOpenWardrobe}
         />
+      )}
+
+      {backupDue && (
+        <p className="notice">
+          💾 Je kast staat alleen op dit apparaat. Maak af en toe een back-up, dan raak je niets kwijt.{' '}
+          <button className="link-button" onClick={onOpenInsights}>
+            Back-up maken
+          </button>
+        </p>
       )}
 
       {keeping && (

@@ -6,12 +6,14 @@ import { TodayView } from './components/TodayView';
 import { WardrobeView } from './components/WardrobeView';
 import {
   loadItems,
+  loadLastBackup,
   loadOccasion,
   loadPlan,
   loadSavedOutfits,
   loadVotes,
   loadWearLog,
   saveItems,
+  saveLastBackup,
   saveOccasion,
   savePlan,
   saveSavedOutfits,
@@ -22,6 +24,9 @@ import type { ClothingItem, Occasion, OutfitVote, PlannedDay, SavedOutfit, WearL
 import { useWeather } from './weather/useWeather';
 
 type Tab = 'vandaag' | 'plannen' | 'outfits' | 'kast' | 'inzicht';
+
+/** Na zoveel dagen zonder back-up krijg je op Vandaag een herinnering. */
+const BACKUP_REMINDER_DAYS = 14;
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'vandaag', label: 'Vandaag', icon: '☀️' },
@@ -41,6 +46,9 @@ export default function App() {
   const [occasion, setOccasion] = useState<Occasion | null>(loadOccasion);
   // Het stuk waar de outfit omheen gebouwd wordt (📌)
   const [anchorId, setAnchorId] = useState<string | null>(null);
+  const [lastBackup, setLastBackup] = useState<number | null>(loadLastBackup);
+  // Moment waarop de app opende; voor de back-upherinnering (Date.now mag niet tijdens het renderen).
+  const [openedAt] = useState(() => Date.now());
   const weather = useWeather();
 
   // Elke wijziging direct bewaren.
@@ -56,6 +64,10 @@ export default function App() {
   // bij elke klik (👍, loggen) een nieuwe outfit uitrekenen.
   const activeItems = useMemo(() => items.filter((i) => !i.archived), [items]);
   const anchor = activeItems.find((i) => i.id === anchorId) ?? null;
+
+  // Herinnering: je hebt eigen kleding ingevoerd, maar al 14 dagen (of nooit) een back-up gemaakt.
+  const hasOwnItems = items.some((i) => !i.id.startsWith('voorbeeld-'));
+  const backupDue = hasOwnItems && (!lastBackup || openedAt - lastBackup > BACKUP_REMINDER_DAYS * 86_400_000);
 
   /** "Dit draag ik vandaag": vervangt een eventuele eerdere keuze voor dezelfde dag. */
   function logWear(date: string, itemIds: string[]) {
@@ -88,6 +100,8 @@ export default function App() {
             onSaveOutfit={(outfit) => setSavedOutfits((current) => [outfit, ...current])}
             onVote={(vote) => setVotes((current) => [...current, vote])}
             onOpenWardrobe={() => setTab('kast')}
+            backupDue={backupDue}
+            onOpenInsights={() => setTab('inzicht')}
           />
         )}
         {tab === 'plannen' && (
@@ -113,7 +127,17 @@ export default function App() {
         )}
         {tab === 'kast' && <WardrobeView items={items} onItemsChange={setItems} onBuildAround={buildAround} />}
         {tab === 'inzicht' && (
-          <InsightsView items={items} wearLog={wearLog} onItemsChange={setItems} onBuildAround={buildAround} />
+          <InsightsView
+            items={items}
+            wearLog={wearLog}
+            onItemsChange={setItems}
+            onBuildAround={buildAround}
+            lastBackup={lastBackup}
+            onBackupMade={(time) => {
+              saveLastBackup(time);
+              setLastBackup(time);
+            }}
+          />
         )}
       </main>
 
