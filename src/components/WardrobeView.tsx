@@ -34,13 +34,15 @@ function searchText(item: ClothingItem): string {
 const CATEGORY_ORDER = CATEGORIES.map((c) => c.value);
 
 /** Wat er in het formulier open staat: een bestaand stuk, of een nieuw stuk (eventueel met foto). */
-type Editing = { item?: ClothingItem; photo?: Blob; color?: string };
+type Editing = { item?: ClothingItem; photo?: Blob; color?: string; source?: Blob };
 
 /** Verkleint een foto en herkent de kleur. */
 async function preparePhoto(file: File): Promise<Editing> {
-  const photo = await resizeImage(file);
+  // Een scherpe versie om eventueel uit bij te snijden, en de gewone foto (800 px) om op te slaan.
+  const source = await resizeImage(file, 1600);
+  const photo = await resizeImage(source);
   const color = await detectColor(photo).catch(() => undefined);
-  return { photo, color: color?.id };
+  return { photo, color: color?.id, source };
 }
 
 export function WardrobeView({ items, onItemsChange, onDeleteItem, onArchiveItem, onBuildAround }: Props) {
@@ -223,6 +225,7 @@ export function WardrobeView({ items, onItemsChange, onDeleteItem, onArchiveItem
           item={editing.item}
           initialPhoto={editing.photo}
           initialColor={editing.color}
+          initialSource={editing.source}
           onSave={async (saved, photo) => {
             await saveItem(saved, photo);
             setEditing(null);
@@ -239,6 +242,7 @@ export function WardrobeView({ items, onItemsChange, onDeleteItem, onArchiveItem
           key={queueTotal - queue.length}
           initialPhoto={queued.photo}
           initialColor={queued.color}
+          initialSource={queued.source}
           progress={`Foto ${queueTotal - queue.length + 1} van ${queueTotal}`}
           onSave={async (saved, photo) => {
             await saveItem(saved, photo);

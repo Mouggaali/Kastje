@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { detectColor } from '../data/detectColor';
+import { getPhoto } from '../data/photos';
 import { useObjectUrl } from '../data/useObjectUrl';
 import { resizeImage } from '../data/resizeImage';
 import { newId } from '../data/storage';
@@ -16,6 +17,7 @@ import {
   type Warmth,
 } from '../types';
 import { ItemPhoto } from './ItemPhoto';
+import { PhotoEditor } from './PhotoEditor';
 
 export type PhotoChange = { kind: 'keep' } | { kind: 'remove' } | { kind: 'new'; blob: Blob };
 
@@ -26,6 +28,8 @@ interface Props {
   initialPhoto?: Blob;
   /** Kleur die uit die foto is herkend */
   initialColor?: string;
+  /** Scherpere versie van die foto (tot 1600 px), om uit bij te snijden */
+  initialSource?: Blob;
   onSave: (item: ClothingItem, photo: PhotoChange) => Promise<void>;
   onDelete?: () => void;
   /** Opruimen zonder te verwijderen */
@@ -39,14 +43,16 @@ interface Props {
 }
 
 const WARMTH_LEVELS: Warmth[] = [1, 2, 3, 4, 5];
+/** Grootte van de scherpe versie waaruit je bijsnijdt; de opgeslagen foto wordt 800 px. */
+const CROP_SOURCE_PX = 1600;
 
 function colorHintText(colorId: string) {
   return `Kleur herkend: ${colorInfo(colorId).label.toLowerCase()}. Klopt het niet? Kies hieronder een andere.`;
 }
 
 export function ItemForm(props: Props) {
-  const { item, initialPhoto, initialColor, onSave, onDelete, onArchive, onBuildAround, progress, onSkip, onCancel } =
-    props;
+  const { item, initialPhoto, initialColor, initialSource } = props;
+  const { onSave, onDelete, onArchive, onBuildAround, progress, onSkip, onCancel } = props;
   const [name, setName] = useState(item?.name ?? '');
   const [category, setCategory] = useState<Category>(item?.category ?? 'shirt');
   const [accessoryType, setAccessoryType] = useState<AccessoryType>(item?.accessoryType ?? 'anders');
@@ -60,8 +66,22 @@ export function ItemForm(props: Props) {
   const [waterproof, setWaterproof] = useState(item?.waterproof ?? false);
   const [photo, setPhoto] = useState<PhotoChange>(initialPhoto ? { kind: 'new', blob: initialPhoto } : { kind: 'keep' });
   const preview = useObjectUrl(photo.kind === 'new' ? photo.blob : null);
+  // Scherpere versie van een nieuwe foto, om uit bij te snijden.
+  const [source, setSource] = useState<Blob | null>(initialSource ?? null);
+  // De foto die nu in de bijsnijd-editor open staat.
+  const [cropping, setCropping] = useState<Blob | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  /** Kleur uit de foto voorstellen, zolang je de kleur nog niet zelf koos. */
+  async function suggestColor(blob: Blob) {
+    if (colorChosen) return;
+    const detected = await detectColor(blob).catch(() => null);
+    if (detected) {
+      setColor(detected.id);
+      setColorHint(colorHintText(detected.id));
+    }
+  }
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget;
@@ -70,21 +90,34 @@ export function ItemForm(props: Props) {
     setBusy(true);
     setError('');
     try {
-      const blob = await resizeImage(file);
+      const large = await resizeImage(file, CROP_SOURCE_PX);
+      const blob = await resizeImage(large);
+      setSource(large);
       setPhoto({ kind: 'new', blob });
-      if (!colorChosen) {
-        const detected = await detectColor(blob).catch(() => null);
-        if (detected) {
-          setColor(detected.id);
-          setColorHint(colorHintText(detected.id));
-        }
-      }
+      await suggestColor(blob);
     } catch {
       setError('Deze foto kon niet worden gelezen. Probeer een JPG- of PNG-bestand.');
     } finally {
       setBusy(false);
       input.value = '';
     }
+  }
+
+  /** Bijsnijd-editor openen met de beste versie van de foto die we hebben. */
+  async function openCrop() {
+    if (photo.kind === 'new') setCropping(source ?? photo.blob);
+    else if (item?.hasPhoto) {
+      const stored = await getPhoto(item.id).catch(() => undefined);
+      if (stored) setCropping(stored);
+      else setError('De foto kon niet worden geladen.');
+    }
+  }
+
+  async function handleCropped(cropped: Blob) {
+    setCropping(null);
+    setPhoto({ kind: 'new', blob: cropped });
+    // Na bijsnijden is de achtergrond weg: de kleur is nu betrouwbaarder te herkennen.
+    await suggestColor(cropped);
   }
 
   function chooseColor(id: string) {
@@ -170,6 +203,11 @@ export function ItemForm(props: Props) {
               🖼️ Uit galerij
               <input type="file" accept="image/*" onChange={handleFile} hidden />
             </label>
+            {hasAnyPhoto && (
+              <button type="button" className="button button--ghost" onClick={openCrop}>
+                ✂️ Bijsnijden
+              </button>
+            )}
             {hasAnyPhoto && (
               <button type="button" className="link-button" onClick={() => setPhoto({ kind: 'remove' })}>
                 Foto verwijderen
@@ -318,6 +356,7 @@ export function ItemForm(props: Props) {
           </button>
         </div>
       </form>
+      {cropping && <PhotoEditor photo={cropping} onDone={handleCropped} onCancel={() => setCropping(null)} />}
     </div>
   );
 }

@@ -531,6 +531,25 @@ p.badge { margin: 0 0 8px; }
 }
 .plan-tip { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }
 
+/* ---------- Foto bijsnijden ---------- */
+
+.sheet-backdrop--top { z-index: 15; }
+.crop-frame {
+  display: grid; place-items: center;
+  background: var(--surface-2); border-radius: var(--radius); padding: 8px;
+}
+.crop-canvas {
+  width: 100%; max-width: 340px; aspect-ratio: 1;
+  border-radius: var(--radius-small);
+  touch-action: none; /* slepen met je vinger verschuift de foto, niet de pagina */
+  cursor: grab; background: var(--surface);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.crop-canvas:active { cursor: grabbing; }
+.crop-controls { display: flex; align-items: flex-end; gap: 12px; }
+.crop-zoom { flex: 1; }
+.crop-zoom input { width: 100%; accent-color: var(--accent); min-height: 0; padding: 0; border: 0; background: none; }
+
 /* ---------- Reis en paklijst ---------- */
 
 .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
