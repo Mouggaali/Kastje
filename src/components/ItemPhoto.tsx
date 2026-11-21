@@ -5,10 +5,11 @@ import { categoryInfo, type ClothingItem } from '../types';
 
 /** Toont de foto van een kledingstuk, of een gekleurd vlak met icoon als er geen foto is. */
 export function ItemPhoto({ item, small = false }: { item: ClothingItem; small?: boolean }) {
-  const [url, setUrl] = useState<string | null>(null);
+  // Elke versie van de foto heeft een eigen sleutel; zo tonen we nooit een oude foto bij een nieuw stuk.
+  const key = `${item.id}:${item.updatedAt}`;
+  const [loaded, setLoaded] = useState<{ key: string; url: string } | null>(null);
 
   useEffect(() => {
-    setUrl(null);
     if (!item.hasPhoto) return;
     let cancelled = false;
     let objectUrl: string | null = null;
@@ -16,15 +17,16 @@ export function ItemPhoto({ item, small = false }: { item: ClothingItem; small?:
       .then((blob) => {
         if (cancelled || !blob) return;
         objectUrl = URL.createObjectURL(blob);
-        setUrl(objectUrl);
+        setLoaded({ key, url: objectUrl });
       })
       .catch(() => {});
     return () => {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [item.id, item.hasPhoto, item.updatedAt]);
+  }, [item.id, item.hasPhoto, key]);
 
+  const url = item.hasPhoto && loaded?.key === key ? loaded.url : null;
   const className = small ? 'item-photo item-photo--small' : 'item-photo';
   if (url) return <img className={className} src={url} alt={item.name} />;
 

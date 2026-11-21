@@ -1,5 +1,6 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { detectColor } from '../data/detectColor';
+import { useObjectUrl } from '../data/useObjectUrl';
 import { resizeImage } from '../data/resizeImage';
 import { newId } from '../data/storage';
 import { COLORS, colorInfo } from '../outfit/colors';
@@ -55,20 +56,9 @@ export function ItemForm(props: Props) {
   const [warmth, setWarmth] = useState<Warmth>(item?.warmth ?? 3);
   const [waterproof, setWaterproof] = useState(item?.waterproof ?? false);
   const [photo, setPhoto] = useState<PhotoChange>(initialPhoto ? { kind: 'new', blob: initialPhoto } : { kind: 'keep' });
-  const [preview, setPreview] = useState<string | null>(null);
+  const preview = useObjectUrl(photo.kind === 'new' ? photo.blob : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-
-  // Voorbeeld-URL maken voor een nieuwe foto, en weer opruimen als hij niet meer nodig is.
-  useEffect(() => {
-    if (photo.kind !== 'new') {
-      setPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(photo.blob);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [photo]);
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget;

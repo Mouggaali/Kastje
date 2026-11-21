@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   outfitFromPieces,
   outfitItems,
@@ -89,18 +89,29 @@ export function TodayView(props: Props) {
   }
 
   // Nieuwe outfits als het weer binnen is, of als kast, gelegenheid, vastgezet stuk of planning verandert.
-  // (Bewust niet bij het loggen of stemmen, anders verspringt de outfit die je net koos.)
-  useEffect(() => {
-    if (!days) return;
-    const planned = days.map((_, i) => (showPlanned[i] ? plannedOutfit(i) : null));
-    setFromPlan(planned.map((p) => p !== null));
-    setOutfits(days.map((_, i) => planned[i] ?? suggest(i)));
+  // Bewust niet bij het loggen of stemmen, anders verspringt de outfit die je net koos.
+  // (Dit is het patroon "state aanpassen als de invoer verandert" uit de React-documentatie:
+  // tijdens het renderen vergelijken met de vorige invoer, zonder extra effect.)
+  const inputs = { items, days: weather.days, occasion, anchor, plan };
+  const [lastInputs, setLastInputs] = useState<typeof inputs | null>(null);
+  const inputsChanged =
+    !lastInputs ||
+    (Object.keys(inputs) as (keyof typeof inputs)[]).some((key) => inputs[key] !== lastInputs[key]);
+  if (inputsChanged) {
+    setLastInputs(inputs);
+    if (days) {
+      const planned = days.map((_, i) => (showPlanned[i] ? plannedOutfit(i) : null));
+      setFromPlan(planned.map((p) => p !== null));
+      setOutfits(days.map((_, i) => planned[i] ?? suggest(i)));
+    }
     setVoted([]);
     setNoAlternative(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, weather.days, occasion, anchor, plan]);
+  }
 
-  useEffect(() => setNoAlternative(false), [day]);
+  function selectDay(index: number) {
+    setDay(index);
+    setNoAlternative(false);
+  }
 
   const outfit = outfits[day];
   const isPlanned = fromPlan[day] ?? false;
@@ -171,7 +182,7 @@ export function TodayView(props: Props) {
             setPickerOpen(false);
           }}
           onUseMyLocation={() => {
-            weather.useMyLocation();
+            weather.locateMe();
             setPickerOpen(false);
           }}
           onCancel={weather.place ? () => setPickerOpen(false) : undefined}
@@ -198,7 +209,7 @@ export function TodayView(props: Props) {
                 label={DAY_LABELS[index]}
                 weather={w}
                 selected={day === index}
-                onSelect={() => setDay(index)}
+                onSelect={() => selectDay(index)}
               />
             ))}
           </div>

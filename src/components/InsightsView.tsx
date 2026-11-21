@@ -1,4 +1,4 @@
-import { toDateString } from '../outfit/outfitLogic';
+import { addDays, toDateString } from '../outfit/outfitLogic';
 import { colorBreakdown, costPerWear, mostWorn, sleepers, SLEEPER_DAYS, wearStats } from '../outfit/stats';
 import type { ClothingItem, WearLogEntry } from '../types';
 import { ItemPhoto } from './ItemPhoto';
@@ -30,9 +30,8 @@ export function InsightsView({ items, wearLog, onItemsChange, onBuildAround }: P
   const colors = colorBreakdown(active);
   const costs = costPerWear(stats);
   const wornOnce = stats.filter((s) => s.count > 0).length;
-  const wornLast30 = new Set(
-    wearLog.filter((e) => e.date > toDateString(new Date(Date.now() - 30 * 86_400_000))).flatMap((e) => e.itemIds),
-  );
+  const monthAgo = addDays(today, -30);
+  const wornLast30 = new Set(wearLog.filter((e) => e.date > monthAgo).flatMap((e) => e.itemIds));
 
   function setArchived(item: ClothingItem, archivedValue: boolean) {
     onItemsChange(items.map((i) => (i.id === item.id ? { ...i, archived: archivedValue } : i)));

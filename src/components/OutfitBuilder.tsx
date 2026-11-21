@@ -48,12 +48,10 @@ export function OutfitBuilder(props: Props) {
     return start;
   });
 
-  const draft: SavedOutfit = {
-    id: initial?.id ?? newId(),
-    name: name.trim() || defaultName,
-    createdAt: initial?.createdAt ?? Date.now(),
-    ...chosen,
-  };
+  // Id en datum één keer vastleggen, niet bij elke render opnieuw.
+  const [id] = useState(() => initial?.id ?? newId());
+  const [createdAt] = useState(() => initial?.createdAt ?? Date.now());
+  const draft: SavedOutfit = { id, name: name.trim() || defaultName, createdAt, ...chosen };
   const pieces = resolveSavedOutfit(draft, items);
   const isEmpty = Object.keys(pieces).length === 0;
 

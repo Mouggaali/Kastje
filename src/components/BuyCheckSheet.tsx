@@ -1,5 +1,6 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { detectColor } from '../data/detectColor';
+import { useObjectUrl } from '../data/useObjectUrl';
 import { resizeImage } from '../data/resizeImage';
 import { buyCheck } from '../outfit/buyCheck';
 import { COLORS, colorInfo } from '../outfit/colors';
@@ -19,19 +20,12 @@ const WARMTH_LEVELS: Warmth[] = [1, 2, 3, 4, 5];
 /** Koop-check: fotografeer iets in de winkel en zie of het bij je kast past. */
 export function BuyCheckSheet({ items, onClose, onAddToWardrobe }: Props) {
   const [photo, setPhoto] = useState<Blob | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const preview = useObjectUrl(photo);
   const [color, setColor] = useState('zwart');
   const [category, setCategory] = useState<Category>('shirt');
   const [warmth, setWarmth] = useState<Warmth>(2);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!photo) return;
-    const url = URL.createObjectURL(photo);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [photo]);
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget;

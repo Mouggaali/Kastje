@@ -1,6 +1,7 @@
 // Opslag van gegevens in localStorage (blijft op dit apparaat).
 import type {
   ClothingItem,
+  DayWeather,
   Occasion,
   OutfitVote,
   Place,
@@ -18,6 +19,7 @@ const KEYS = {
   votes: 'kastje.votes',
   plan: 'kastje.plan',
   occasion: 'kastje.occasion',
+  weatherCache: 'kastje.weatherCache',
 };
 
 function read<T>(key: string, fallback: T): T {
@@ -106,6 +108,21 @@ export function loadOccasion(): Occasion | null {
 
 export function saveOccasion(occasion: Occasion | null): void {
   write(KEYS.occasion, occasion);
+}
+
+/** Laatst opgehaalde weersverwachting, zodat de app ook zonder internet iets laat zien. */
+export interface WeatherCache {
+  placeKey: string;
+  fetchedAt: number;
+  days: DayWeather[];
+}
+
+export function loadWeatherCache(): WeatherCache | null {
+  return read<WeatherCache | null>(KEYS.weatherCache, null);
+}
+
+export function saveWeatherCache(cache: WeatherCache): void {
+  write(KEYS.weatherCache, cache);
 }
 
 export function loadPlace(): Place | null {
