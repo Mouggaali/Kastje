@@ -201,6 +201,16 @@ export function TodayView(props: Props) {
         </div>
       )}
 
+      {weather.status === 'ready' && weather.offline && weather.fetchedAt && (
+        <p className="notice">
+          📴 Je bent offline. Dit is het weer van{' '}
+          {new Date(weather.fetchedAt).toLocaleString('nl-NL', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}.{' '}
+          <button className="link-button" onClick={weather.retry}>
+            Opnieuw proberen
+          </button>
+        </p>
+      )}
+
       {weather.status === 'ready' && days && (
         <>
           <div className="weather-row">
