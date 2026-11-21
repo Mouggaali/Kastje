@@ -27,7 +27,11 @@ export function BackupCard({ lastBackup, onBackupMade }: Props) {
     try {
       const backup = await createBackup();
       const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
-      await saveFile(blob, backupFileName());
+      const saved = await saveFile(blob, backupFileName());
+      if (!saved) {
+        setMessage('Back-up geannuleerd: er is niets bewaard.');
+        return;
+      }
       const now = Date.now();
       onBackupMade(now);
       setMessage(`Back-up gemaakt met ${countItems(backup)} kledingstukken en ${Object.keys(backup.photos).length} foto's.`);

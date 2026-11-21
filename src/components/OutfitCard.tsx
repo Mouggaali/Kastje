@@ -82,6 +82,7 @@ export function OutfitCard(props: Props) {
                 onClick={() => onVote(1)}
                 aria-label="Goede combinatie"
                 aria-pressed={voted === 1}
+                disabled={voted === 1}
               >
                 👍
               </button>

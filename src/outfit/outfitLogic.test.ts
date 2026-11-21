@@ -256,6 +256,21 @@ describe('laagjes en accessoires', () => {
     expect(outfit.explanation).not.toContain('niet waterdicht');
   });
 
+  it('een vastgezet accessoire komt altijd mee, ook als het weer er niet om vraagt', () => {
+    const sjaal = closet.find((i) => i.id === 'sjaal')!;
+    const outfit = suggestOutfit({ items: closet, weather: at(18), wearLog: [], date: TODAY, anchor: sjaal, random: noRandom });
+    expect(outfit.accessories?.map((a) => a.id)).toEqual(['sjaal']);
+    expect(outfit.top).toBeDefined();
+    expect(outfit.explanation).toContain('Rond je sjaal gebouwd.');
+  });
+
+  it('een vastgezette sjaal vervangt de automatisch gekozen sjaal, niet de muts', () => {
+    const extra = [...closet, item('rode sjaal', 'accessoire', 3, { accessoryType: 'sjaal', color: 'rood' })];
+    const rood = extra.find((i) => i.id === 'rode sjaal')!;
+    const outfit = suggestOutfit({ items: extra, weather: at(2), wearLog: [], date: TODAY, anchor: rood, random: noRandom });
+    expect(outfit.accessories?.map((a) => a.id)).toEqual(['rode sjaal', 'muts']);
+  });
+
   it('accessoires en laag tellen mee bij bewaren en terughalen', () => {
     const outfit = suggestOutfit({ items: closet, weather: at(2), wearLog: [], date: TODAY, random: noRandom });
     const ids = piecesToIds(outfit);

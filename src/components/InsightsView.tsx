@@ -35,7 +35,11 @@ export function InsightsView({ items, wearLog, onArchiveChange, onBuildAround, l
   const costs = costPerWear(stats);
   const wornOnce = stats.filter((s) => s.count > 0).length;
   const monthAgo = addDays(today, -30);
-  const wornLast30 = new Set(wearLog.filter((e) => e.date > monthAgo).flatMap((e) => e.itemIds));
+  // Alleen stukken die nu nog in je kast hangen, anders kan het percentage boven de 100% uitkomen.
+  const activeIds = new Set(active.map((i) => i.id));
+  const wornLast30 = new Set(
+    wearLog.filter((e) => e.date > monthAgo).flatMap((e) => e.itemIds.filter((id) => activeIds.has(id))),
+  );
 
   const setArchived = onArchiveChange;
 

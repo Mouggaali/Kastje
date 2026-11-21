@@ -40,9 +40,11 @@ export function OutfitCollage({ pieces, onTileClick, pinnedId, compact = false }
               )}
             </>
           );
+          // Het shirt ónder de trui is niet los vast te zetten: dan zou het de trui vervangen.
+          const pinnable = onTileClick && item.id !== pieces.layer?.id;
           return (
             <li key={item.id} className={pinned ? 'collage-tile collage-tile--pinned' : 'collage-tile'}>
-              {onTileClick ? (
+              {pinnable ? (
                 <button
                   type="button"
                   className="collage-button"

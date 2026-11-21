@@ -16,6 +16,8 @@ export interface WeatherState {
   offline: boolean;
   /** Wanneer de getoonde verwachting is opgehaald (ms) */
   fetchedAt: number | null;
+  /** Laatste keer dat de app actief was (ms); voor "welk uur is het nu" */
+  checkedAt: number;
   choosePlace: (place: Place) => void;
   locateMe: () => void;
   retry: () => void;
@@ -25,6 +27,11 @@ export interface WeatherState {
 type FetchResult =
   | { key: string; days: DayWeather[]; fetchedAt: number; offline: boolean }
   | { key: string; error: string };
+
+/** Ouder dan dit: bij het openen van de app opnieuw ophalen. */
+const REFRESH_MS = 60 * 60 * 1000;
+/** Zo vaak kijken we of het een nieuwe dag is, als de app gewoon openstaat. */
+const CHECK_EVERY_MS = 10 * 60 * 1000;
 
 const placeKey = (place: Place) => `${place.latitude},${place.longitude}`;
 
@@ -96,14 +103,40 @@ export function useWeather(): WeatherState {
     };
   }, [place, currentKey]);
 
+  // Opnieuw ophalen als je de app weer opent op een nieuwe dag, of als de verwachting ouder is dan een uur.
+  // (Een geïnstalleerde app kan dagen in het geheugen blijven; dan mag "vandaag" niet gisteren zijn.)
+  const [checkedAt, setCheckedAt] = useState(() => Date.now());
+  const lastFetchedAt = result && !('error' in result) ? result.fetchedAt : null;
+  useEffect(() => {
+    function check() {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      setCheckedAt(now);
+      const stale =
+        lastFetchedAt !== null &&
+        (toDateString(new Date(now)) !== toDateString(new Date(lastFetchedAt)) || now - lastFetchedAt > REFRESH_MS);
+      if (stale) setReloadKey((k) => k + 1);
+    }
+    document.addEventListener('visibilitychange', check);
+    const timer = setInterval(check, CHECK_EVERY_MS);
+    return () => {
+      document.removeEventListener('visibilitychange', check);
+      clearInterval(timer);
+    };
+  }, [lastFetchedAt]);
+
   // De status volgt uit wat we weten, in plaats van hem los bij te houden.
   const current = result && result.key === currentKey ? result : null;
+  // Tijdens het verversen voor dezelfde plaats laten we het vorige weer gewoon staan.
+  const previous =
+    !current && place && result && !('error' in result) && result.key.startsWith(`${placeKey(place)}#`) ? result : null;
   let status: WeatherStatus;
   if (!place) status = locating ? 'locating' : 'needs-place';
+  else if (previous) status = 'ready';
   else if (!current) status = 'loading';
   else status = 'error' in current ? 'error' : 'ready';
 
-  const ready = current && !('error' in current) ? current : null;
+  const ready = current && !('error' in current) ? current : previous;
   return {
     place,
     days: ready?.days ?? null,
@@ -111,6 +144,7 @@ export function useWeather(): WeatherState {
     message: current && 'error' in current ? current.error : locateError,
     offline: ready?.offline ?? false,
     fetchedAt: ready?.fetchedAt ?? null,
+    checkedAt,
     choosePlace,
     locateMe,
     retry: () => setReloadKey((k) => k + 1),

@@ -349,9 +349,12 @@ export function suggestOutfit(options: SuggestOptions): Outfit {
   const chosen: OutfitPieces = {};
   const missing: string[] = [];
 
-  // Een vastgezet stuk gaat er altijd in; de rest wordt eromheen gekozen.
+  // Een vastgezet stuk gaat er altijd in; de rest wordt eromheen gekozen (ook qua kleur).
+  // Een accessoire hoort bij geen vast onderdeel, dus dat gaat bij de accessoires.
   const anchorSlot = anchor ? slotOf(anchor) : undefined;
+  const anchorAccessory = anchor?.category === 'accessoire' ? anchor : undefined;
   if (anchor && anchorSlot) chosen[anchorSlot] = anchor;
+  if (anchorAccessory) chosen.accessories = [anchorAccessory];
 
   // De jas eerst: die is bij slecht weer het belangrijkst, de rest past zich qua kleur aan.
   const slots: Slot[] = conditions.needsJacket ? ['jacket', 'top', 'bottom', 'shoes'] : ['top', 'bottom', 'shoes'];
@@ -371,12 +374,16 @@ export function suggestOutfit(options: SuggestOptions): Outfit {
   }
 
   // Accessoires die het weer vraagt (sjaal, muts, zonnebril, paraplu, …), als je ze hebt.
-  const wanted = wantedAccessories(weather, chosen.jacket);
-  const accessories = pickAccessories(items, wanted, outfitItems(chosen), random);
+  // (Een vastgezet accessoire vervangt de automatische keuze van hetzelfde soort.)
+  const wanted = wantedAccessories(weather, chosen.jacket).filter((w) => w.type !== anchorAccessory?.accessoryType);
+  const accessories = [
+    ...(anchorAccessory ? [anchorAccessory] : []),
+    ...pickAccessories(items, wanted, outfitItems(chosen), random),
+  ];
   if (accessories.length > 0) chosen.accessories = accessories;
 
   let explanation = explain(weather, chosen);
-  if (anchor && anchorSlot) explanation += ` Rond je ${anchor.name.toLowerCase()} gebouwd.`;
+  if (anchor) explanation += ` Rond je ${anchor.name.toLowerCase()} gebouwd.`;
   if (occasion) {
     const label = OCCASIONS.find((o) => o.value === occasion)?.label.toLowerCase();
     const notLabelled = outfitItems(chosen).filter((i) => !i.occasions?.includes(occasion));

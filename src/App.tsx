@@ -94,7 +94,11 @@ export default function App() {
     showUndo(
       `"${item.name}" verwijderd`,
       () => setItems((current) => [...current, item]),
-      () => void deletePhoto(item.id).catch(() => {}),
+      // Pas definitief wissen als het stuk echt weg is. (Is er intussen een back-up teruggezet
+      // waarin het stuk wél zit, dan laten we de foto staan.)
+      () => {
+        if (!loadItems().some((i) => i.id === item.id)) deletePhoto(item.id).catch(() => {});
+      },
     );
   }
 
@@ -120,7 +124,9 @@ export default function App() {
   return (
     <div className="app">
       <main>
-        {tab === 'vandaag' && (
+        {/* Vandaag blijft altijd bestaan (alleen verborgen), zodat de gekozen en gelogde outfit
+            niet verdwijnt als je even naar een ander tabblad gaat. */}
+        <div hidden={tab !== 'vandaag'} data-tab="vandaag">
           <TodayView
             items={activeItems}
             wearLog={wearLog}
@@ -139,7 +145,7 @@ export default function App() {
             backupDue={backupDue}
             onOpenInsights={() => setTab('inzicht')}
           />
-        )}
+        </div>
         {tab === 'plannen' && (
           <PlanView
             items={activeItems}

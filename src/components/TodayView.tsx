@@ -63,7 +63,7 @@ export function TodayView(props: Props) {
   const [noAlternative, setNoAlternative] = useState(false);
   const [keeping, setKeeping] = useState(false);
   // Het huidige uur, zodat tips voor vandaag niet over uren gaan die al voorbij zijn.
-  const [nowHour] = useState(() => new Date().getHours());
+  const nowHour = new Date(weather.checkedAt).getHours();
 
   const plannedFor = (index: number) => days && plan.find((p) => p.date === days[index].date);
 
@@ -93,7 +93,10 @@ export function TodayView(props: Props) {
   // Bewust niet bij het loggen of stemmen, anders verspringt de outfit die je net koos.
   // (Dit is het patroon "state aanpassen als de invoer verandert" uit de React-documentatie:
   // tijdens het renderen vergelijken met de vorige invoer, zonder extra effect.)
-  const inputs = { items, days: weather.days, occasion, anchor, plan };
+  // Bij het weer telt alleen de datum: een verse weersverwachting voor dezelfde dag mag de outfit
+  // die je al koos (en misschien logde) niet vervangen. Een nieuwe dag wel.
+  const dates = days?.map((d) => d.date).join() ?? '';
+  const inputs = { items, dates, occasion, anchor, plan };
   const [lastInputs, setLastInputs] = useState<typeof inputs | null>(null);
   const inputsChanged =
     !lastInputs ||
@@ -134,6 +137,8 @@ export function TodayView(props: Props) {
 
   function vote(value: 1 | -1) {
     if (!days || !outfit) return;
+    // Eén 👍 per outfit; nog eens tikken telt niet dubbel.
+    if (value === 1 && voted[day] === 1) return;
     const entry: OutfitVote = { itemIds: outfitItems(outfit).map((i) => i.id), vote: value, date: days[day].date };
     onVote(entry);
     if (value === 1) {

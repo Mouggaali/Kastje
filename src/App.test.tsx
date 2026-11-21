@@ -34,7 +34,12 @@ function openTab(name: string) {
   fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name }));
 }
 
-const cardNames = () => screen.queryAllByText((_, el) => el?.classList.contains('item-name') ?? false).map((el) => el.textContent);
+/** Namen van kledingstukken in het zichtbare tabblad (Vandaag blijft verborgen op de pagina staan). */
+const cardNames = () =>
+  screen
+    .queryAllByText((_, el) => el?.classList.contains('item-name') ?? false)
+    .filter((el) => !el.closest('[hidden]'))
+    .map((el) => el.textContent);
 
 beforeEach(() => {
   localStorage.clear();
@@ -107,6 +112,30 @@ describe('Vandaag', () => {
 
     const topAfter = cardNames().find((n) => n?.includes('trui'));
     expect(topAfter).not.toBe(topBefore);
+    expect(JSON.parse(localStorage.getItem('kastje.votes')!)).toHaveLength(1);
+  });
+
+  it('de gelogde outfit blijft staan als je even naar een ander tabblad gaat', async () => {
+    render(<App />);
+    await screen.findByText('Outfit voor vandaag');
+    const outfit = cardNames();
+    fireEvent.click(screen.getByRole('button', { name: 'Dit draag ik vandaag' }));
+
+    openTab('Kast');
+    openTab('Vandaag');
+
+    expect(cardNames()).toEqual(outfit);
+    expect(screen.getByRole('button', { name: '✓ Gelogd voor vandaag' })).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem('kastje.wearLog')!)).toHaveLength(1);
+  });
+
+  it('👍 telt maar één keer per outfit', async () => {
+    render(<App />);
+    await screen.findByText('Outfit voor vandaag');
+    const like = screen.getByRole('button', { name: 'Goede combinatie' });
+    fireEvent.click(like);
+    fireEvent.click(like);
+    fireEvent.click(like);
     expect(JSON.parse(localStorage.getItem('kastje.votes')!)).toHaveLength(1);
   });
 

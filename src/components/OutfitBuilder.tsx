@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { newId } from '../data/storage';
 import { harmonyScore } from '../outfit/harmony';
 import {
+  missingFromSaved,
   outfitItems,
-  piecesToIds,
   resolveSavedOutfit,
   SLOT_CATEGORIES,
   type OutfitIds,
@@ -47,7 +47,16 @@ const SECTIONS: { key: SectionKey; title: string; empty: string; categories: Cat
 export function OutfitBuilder(props: Props) {
   const { items, initial, defaultName, title, subtitle, hideName, onClear, onSave, onCancel } = props;
   const [name, setName] = useState(initial?.name ?? '');
-  const [chosen, setChosen] = useState<OutfitIds>(() => piecesToIds(resolveSavedOutfit(initial ?? {}, items)));
+  // De oorspronkelijke ids overnemen, ook van stukken die nu gearchiveerd zijn: anders zou
+  // opslaan ze stilletjes uit je outfit halen. (Ze zijn alleen niet zichtbaar zolang ze gearchiveerd zijn.)
+  const [chosen, setChosen] = useState<OutfitIds>(() => ({
+    top: initial?.top,
+    layer: initial?.layer,
+    bottom: initial?.bottom,
+    shoes: initial?.shoes,
+    jacket: initial?.jacket,
+    accessories: initial?.accessories?.length ? [...initial.accessories] : undefined,
+  }));
 
   // Id en datum één keer vastleggen, niet bij elke render opnieuw.
   const [id] = useState(() => initial?.id ?? newId());
@@ -55,6 +64,8 @@ export function OutfitBuilder(props: Props) {
   const draft: SavedOutfit = { id, name: name.trim() || defaultName, createdAt, ...chosen };
   const pieces = resolveSavedOutfit(draft, items);
   const isEmpty = Object.keys(pieces).length === 0;
+  // Stukken die in de outfit zitten maar nu gearchiveerd (of verwijderd) zijn.
+  const hiddenCount = missingFromSaved(draft, items);
 
   /** Tik op een foto om hem te kiezen; nog eens tikken haalt hem weg. Accessoires: meerdere tegelijk. */
   function toggle(key: SectionKey, itemId: string) {
@@ -84,6 +95,13 @@ export function OutfitBuilder(props: Props) {
       <form className="sheet" onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()}>
         <h2>{title ?? (initial?.id ? 'Outfit bewerken' : 'Outfit samenstellen')}</h2>
         {subtitle && <p className="muted">{subtitle}</p>}
+
+        {hiddenCount > 0 && (
+          <p className="hint">
+            {hiddenCount === 1 ? 'Eén stuk' : `${hiddenCount} stukken`} uit deze outfit {hiddenCount === 1 ? 'is' : 'zijn'} nu
+            gearchiveerd of verwijderd. Dat blijft bewaard, tenzij je het hier vervangt.
+          </p>
+        )}
 
         <div className="builder-preview">
           {isEmpty ? (

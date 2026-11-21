@@ -4,7 +4,7 @@
  * Handig als je je browsergegevens wist, een nieuwe telefoon hebt, of je kast
  * van je computer naar de geïnstalleerde app op je telefoon wilt overzetten.
  */
-import { clearPhotos, getAllPhotos, savePhoto } from './photos';
+import { getAllPhotos, savePhoto } from './photos';
 
 export const BACKUP_VERSION = 1;
 const PREFIX = 'kastje.';
@@ -113,13 +113,21 @@ export async function createBackup(): Promise<BackupFile> {
   };
 }
 
-/** Zet een back-up terug. Alles in Kastje op dit apparaat wordt vervangen. */
+/**
+ * Zet een back-up terug. Alles in Kastje op dit apparaat wordt vervangen.
+ *
+ * Volgorde, zodat een mislukking je huidige kast niet beschadigt:
+ * 1. eerst alle foto's uit de back-up inlezen (gaat dat mis, dan is er nog niets veranderd);
+ * 2. de foto's opslaan (bestaande foto's worden níét eerst gewist);
+ * 3. pas daarna de gegevens vervangen.
+ * Foto's van stukken die niet in de back-up zitten, ruimt de app bij de volgende start op.
+ */
 export async function restoreBackup(backup: BackupFile): Promise<void> {
-  await clearPhotos();
+  const photos: [string, Blob][] = [];
   for (const [id, dataUrl] of Object.entries(backup.photos)) {
-    const blob = await (await fetch(dataUrl)).blob();
-    await savePhoto(id, blob);
+    photos.push([id, await (await fetch(dataUrl)).blob()]);
   }
+  for (const [id, blob] of photos) await savePhoto(id, blob);
   applyData(localStorage, backup.data);
 }
 
