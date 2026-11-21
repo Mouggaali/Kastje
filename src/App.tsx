@@ -114,6 +114,14 @@ export default function App() {
     showUndo(`Outfit "${outfit.name}" verwijderd`, () => setSavedOutfits((current) => [outfit, ...current]));
   }
 
+  /** Een dag uit het draagdagboek wissen (met "Ongedaan maken"). */
+  function removeLog(date: string) {
+    const entry = wearLog.find((e) => e.date === date);
+    if (!entry) return;
+    setWearLog((log) => log.filter((e) => e.date !== date));
+    showUndo('Dag gewist uit je dagboek', () => setWearLog((log) => [...log.filter((e) => e.date !== date), entry]));
+  }
+
   /** "✨ Outfit rond dit stuk": naar Vandaag met dit stuk vastgezet. */
   function buildAround(item: ClothingItem) {
     setAnchorId(item.id);
@@ -186,6 +194,8 @@ export default function App() {
             onArchiveChange={setArchived}
             onBuildAround={buildAround}
             lastBackup={lastBackup}
+            onLogWear={logWear}
+            onRemoveLog={removeLog}
             onBackupMade={(time) => {
               saveLastBackup(time);
               setLastBackup(time);

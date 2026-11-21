@@ -531,6 +531,30 @@ p.badge { margin: 0 0 8px; }
 }
 .plan-tip { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }
 
+/* ---------- Draagdagboek ---------- */
+
+.diary-count { margin: 0; font-size: 13px; }
+.diary-nav { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 10px; }
+.diary-nav .vote { font-size: 22px; line-height: 1; }
+.diary-nav .vote:disabled { opacity: 0.3; }
+.diary-month::first-letter { text-transform: uppercase; }
+.diary-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.diary-weekday { text-align: center; font-size: 11px; font-weight: 600; color: var(--ink-soft); text-transform: uppercase; }
+.diary-day {
+  position: relative; aspect-ratio: 1; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  padding: 3px; border: 1px solid transparent; border-radius: 8px;
+  background: var(--surface-2); color: var(--ink); overflow: hidden;
+}
+.diary-day:disabled { background: transparent; color: var(--ink-soft); opacity: 0.45; }
+.diary-day--worn { background: var(--accent-soft); }
+.diary-day--today { border-color: var(--accent); font-weight: 700; }
+.diary-date { font-size: 11px; line-height: 1.2; }
+.diary-day .item-photo--small {
+  position: absolute; inset: auto 3px 3px 3px; width: auto; height: calc(100% - 18px);
+  aspect-ratio: auto; font-size: 14px; border-radius: 5px;
+}
+
 /* ---------- Foto bijsnijden ---------- */
 
 .sheet-backdrop--top { z-index: 15; }

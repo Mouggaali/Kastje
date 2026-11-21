@@ -2,6 +2,7 @@ import { addDays, toDateString } from '../outfit/outfitLogic';
 import { colorBreakdown, costPerWear, mostWorn, sleepers, SLEEPER_DAYS, wearStats } from '../outfit/stats';
 import type { ClothingItem, WearLogEntry } from '../types';
 import { BackupCard } from './BackupCard';
+import { DiaryCard } from './DiaryCard';
 import { ItemPhoto } from './ItemPhoto';
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
   onBuildAround: (item: ClothingItem) => void;
   lastBackup: number | null;
   onBackupMade: (time: number) => void;
+  onLogWear: (date: string, itemIds: string[]) => void;
+  onRemoveLog: (date: string) => void;
 }
 
 const euro = (value: number) =>
@@ -24,7 +27,8 @@ function daysAgo(date: string, today: string): string {
 }
 
 /** Inzicht in je kast: wat draag je echt, wat slaapt, en wat kun je opruimen. */
-export function InsightsView({ items, wearLog, onArchiveChange, onBuildAround, lastBackup, onBackupMade }: Props) {
+export function InsightsView(props: Props) {
+  const { items, wearLog, onArchiveChange, onBuildAround, lastBackup, onBackupMade, onLogWear, onRemoveLog } = props;
   const today = toDateString(new Date());
   const active = items.filter((i) => !i.archived);
   const archived = items.filter((i) => i.archived);
@@ -63,6 +67,14 @@ export function InsightsView({ items, wearLog, onArchiveChange, onBuildAround, l
           <span>dagen gelogd</span>
         </div>
       </div>
+
+      <DiaryCard
+        allItems={items}
+        activeItems={active}
+        wearLog={wearLog}
+        onLogWear={onLogWear}
+        onRemoveLog={onRemoveLog}
+      />
 
       {wearLog.length === 0 && (
         <p className="notice">

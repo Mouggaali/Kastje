@@ -95,6 +95,44 @@ describe('Kast', () => {
   });
 });
 
+describe('Draagdagboek', () => {
+  it('een vergeten dag toevoegen, wijzigen, wissen en weer terughalen', () => {
+    render(<App />);
+    openTab('Inzicht');
+    const log = () => JSON.parse(localStorage.getItem('kastje.wearLog') ?? '[]') as { date: string; itemIds: string[] }[];
+
+    // Gisteren aanklikken (in de huidige maand, of via ‹ als vandaag de 1e is)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (yesterday.getMonth() !== new Date().getMonth()) fireEvent.click(screen.getByRole('button', { name: 'Vorige maand' }));
+    const label = yesterday.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' });
+    fireEvent.click(screen.getByRole('button', { name: label }));
+    expect(screen.getByText(`Niets gelogd op ${label}`)).toBeTruthy();
+
+    // Toevoegen: grijze trui + jeans
+    fireEvent.click(screen.getByRole('button', { name: 'Toevoegen' }));
+    fireEvent.click(screen.getByRole('button', { name: /Grijze trui/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Blauwe jeans/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Opslaan' }));
+    expect(log()).toHaveLength(1);
+    expect(log()[0].itemIds).toEqual(['grijs', 'jeans']);
+
+    // Wijzigen: sneakers erbij
+    fireEvent.click(screen.getByRole('button', { name: `${label}, gelogd` }));
+    fireEvent.click(screen.getByRole('button', { name: 'Wijzigen' }));
+    fireEvent.click(screen.getByRole('button', { name: /Witte sneakers/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Opslaan' }));
+    expect(log()[0].itemIds).toEqual(['grijs', 'jeans', 'sneakers']);
+
+    // Wissen en ongedaan maken
+    fireEvent.click(screen.getByRole('button', { name: `${label}, gelogd` }));
+    fireEvent.click(screen.getByRole('button', { name: 'Wissen' }));
+    expect(log()).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(log()[0].itemIds).toEqual(['grijs', 'jeans', 'sneakers']);
+  });
+});
+
 describe('Vandaag', () => {
   it('toont een outfit met harmoniescore voor het weer', async () => {
     render(<App />);
